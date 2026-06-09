@@ -162,8 +162,7 @@ tests/                  # 回归与 contract 测试套件
 
 ## 截图 / Screenshots
 
-> 注：以下为**占位图**，发布前会替换为真实页面截图（见
-> [`assets/screenshots/`](assets/screenshots/)）。
+注：以下为 Capital Studio 真实产品界面截图，更多截图见 assets/screenshots/。
 
 ### DCF Dashboard — DCF 估值工作台
 中文估值工作台：公司信息、假设参数（WACC、终值方法、运营预测）与 Excel 导出。
