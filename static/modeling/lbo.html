@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LBO Acquisition Model</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .lbo-layout {
+      display: grid;
+      grid-template-columns: 400px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .lbo-inputs {
+      position: sticky;
+      top: 0;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .field-row:last-child { border-bottom: 0; }
+    .field-label { color: var(--text-muted); font-size: 12px; }
+    .lbo-input {
+      width: 120px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #4d94ff;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      text-align: right;
+      padding: 5px 7px;
+      outline: none;
+    }
+    .lbo-input:focus { border-color: var(--accent); }
+    .section-kicker {
+      margin-top: 14px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .headline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+    .headline {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .headline-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .headline-value {
+      margin-top: 6px;
+      font-family: Consolas, monospace;
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .return-context-badge {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .return-context-line + .return-context-line {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .unit-tag {
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .linked-tag {
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .field-hint {
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 4px 0 8px;
+    }
+    .lbo-readout {
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+    .card-unit {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin: -4px 0 8px;
+    }
+    .lbo-input.input-readonly {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .attribution-footnotes {
+      margin-top: 9px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .scenario-sensitivity-note {
+      margin-bottom: 10px;
+      padding: 7px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .attribution-footnotes > div + div {
+      margin-top: 5px;
+    }
+    .forecast-mode-line {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 2px 0 6px;
+    }
+    .forecast-mode-line span { color: var(--accent); font-weight: 600; }
+    .manual-forecast-banner {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+    }
+    .manual-forecast-title { font-size: 12px; font-weight: 700; }
+    .manual-forecast-desc { font-size: 11px; color: var(--text-muted); margin: 4px 0 8px; }
+    .manual-forecast-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .debt-stress-hint {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(210,153,34,0.10);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .overlay-card {
+      position: relative;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      width: min(760px, 92vw);
+      max-height: 88vh;
+      overflow: auto;
+    }
+    .overlay-close {
+      position: absolute;
+      top: 10px; right: 12px;
+      background: none; border: none;
+      color: var(--text-muted);
+      font-size: 22px; line-height: 1; cursor: pointer;
+    }
+    .overlay-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .overlay-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+    .overlay-table-scroll { overflow-x: auto; }
+    .overlay-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    #manual-forecast-table input {
+      width: 92px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      padding: 4px 6px;
+      text-align: right;
+      font-family: Consolas, monospace;
+    }
+    .forecast-toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: rgba(46,160,67,0.16);
+      border: 1px solid rgba(46,160,67,0.5);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      z-index: 1100;
+    }
+    .error-panel {
+      display: none;
+      border: 1px solid var(--red);
+      background: rgba(248,81,73,0.08);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .defaults-panel {
+      display: none;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .defaults-title {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+    .defaults-subtitle {
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .defaults-panel ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-muted);
+    }
+    .defaults-warning {
+      margin-top: 10px;
+      color: #ffcc66;
+    }
+    .defaults-flags {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-family: Consolas, monospace;
+      font-size: 11px;
+    }
+    .lbo-action-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .lbo-action-row .btn {
+      flex: 1 1 auto;
+      padding: 7px 8px;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .scenario-active-btn {
+      background: rgba(46,160,67,0.22) !important;
+      border-color: rgba(46,160,67,0.75) !important;
+      color: #7fd58a !important;
+    }
+    .scenario-export-active-hint {
+      display: none;
+      margin-top: 8px;
+      color: #7fd58a;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .scenario-export-active-hint.is-active { display: block; }
+    .sensitivity-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+    }
+    .sensitivity-title { font-size: 12px; font-weight: 800; }
+    .sensitivity-sub { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+    .sensitivity-grid-title {
+      margin: 12px 0 6px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .sensitivity-base {
+      background: rgba(77,148,255,0.16);
+      color: #8bbcff;
+      font-weight: 800;
+    }
+    .sensitivity-stale {
+      display: none;
+      color: #ffcc66;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .sensitivity-stale.is-active { display: block; }
+    .save-case-card {
+      margin-top: 16px;
+    }
+    .save-case-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .workspace-case-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+    .case-list-panel {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 950;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(0,0,0,0.58);
+    }
+    .case-launcher-card,
+    .case-switcher-card {
+      position: relative;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 18px 20px;
+      width: min(920px, 94vw);
+      max-height: 88vh;
+      overflow: auto;
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .case-list-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .case-list-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .case-list-subtitle {
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .case-list-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 0;
+      border-top: 1px solid var(--border);
+    }
+    .case-list-name { font-weight: 700; }
+    .case-list-meta {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .case-list-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .case-name-input {
+      width: 100%;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      padding: 7px 9px;
+      outline: none;
+    }
+    .export-card { margin-top: 16px; }
+    .scn-unavail { color: var(--text-muted); opacity: 0.6; }
+    .export-desc {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .export-hint {
+      display: none;
+      margin-top: 10px;
+      color: #ffcc66;
+      font-size: 12px;
+    }
+    .export-card.export-disabled .export-hint { display: block; }
+    .export-card.export-disabled #excel-btn {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .audit-list {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.65;
+      padding-left: 18px;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .data-table th, .data-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 7px 8px;
+      text-align: right;
+      font-family: Consolas, monospace;
+    }
+    .data-table th:first-child, .data-table td:first-child { text-align: left; }
+    .data-table th {
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .lbo-table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-color: #2f80ed #111820;
+      scrollbar-width: thin;
+    }
+    .lbo-table-scroll::-webkit-scrollbar {
+      height: 8px;
+    }
+    .lbo-table-scroll::-webkit-scrollbar-track {
+      background: #111820;
+      border-radius: 999px;
+    }
+    .lbo-table-scroll::-webkit-scrollbar-thumb {
+      background: #2f80ed;
+      border-radius: 999px;
+    }
+    .lbo-table-scroll::-webkit-scrollbar-thumb:hover {
+      background: #5aa0ff;
+    }
+    .lbo-table-scroll .lbo-table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+    }
+    .tranche-block {
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 9px;
+      margin-top: 8px;
+    }
+    .tranche-block-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .tranche-block .field-row { padding: 4px 0; }
+    .tranche-mini {
+      width: 90px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #4d94ff;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      text-align: right;
+      padding: 3px 5px;
+      outline: none;
+    }
+    .badge-pass { color: #7fd58a; font-weight: 700; }
+    .badge-breach { color: #ff6b6b; font-weight: 700; }
+    .badge-unavail { color: #ffcc66; font-weight: 700; }
+    .badge-netcash { color: #5aa0ff; font-weight: 700; }
+    @media (max-width: 900px) {
+      .lbo-layout { grid-template-columns: 1fr; }
+      .lbo-inputs { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">LBO ENGINE CORE</div>
+    <div class="subtitle">V4.1 default structure builder on V4.0 engine</div>
+  </div>
+  <div class="header-right">
+    <details class="modeling-menu">
+      <summary>建模工具 ▼</summary>
+      <div class="modeling-menu-list">
+        <a href="/modeling/dcf">DCF 估值模型</a>
+        <a href="/modeling/lbo">LBO 收购模型</a>
+      </div>
+    </details>
+    <a href="/" style="color:var(--accent);font-size:12px;text-decoration:none;">持仓面板</a>
+  </div>
+</header>
+
+<main class="container" style="padding-top:20px;">
+  <div class="lbo-layout">
+    <aside class="lbo-inputs">
+      <div class="card">
+        <div class="card-title">Assumptions</div>
+        <div class="field-row">
+          <span class="field-label">Symbol</span>
+          <input class="lbo-input" id="symbol" value="SYNTH" style="text-align:left;" />
+        </div>
+        <div class="field-row">
+          <span class="field-label">Currency</span>
+          <select class="lbo-input" id="currency" style="text-align:left;" title="Reporting currency (amounts in millions)">
+            <option value="USD">USD</option>
+            <option value="HKD">HKD</option>
+            <option value="CNY">CNY</option>
+          </select>
+        </div>
+        <div class="field-hint">所有金额单位为百万 / All amounts in <span class="unit-tag">USD</span> millions (mm).</div>
+        <div class="section-kicker">Transaction</div>
+        <div class="field-row"><span class="field-label">Entry EBITDA <span class="unit-tag">(USD mm)</span></span><input class="lbo-input" id="entry_ebitda" type="number" value="1000" /></div>
+        <div class="field-row"><span class="field-label">Entry Multiple</span><input class="lbo-input" id="entry_multiple" type="number" step="0.1" value="10.0" /></div>
+        <div class="field-row"><span class="field-label">Exit Multiple</span><input class="lbo-input" id="exit_multiple" type="number" step="0.1" value="10.0" /></div>
+        <div class="field-row"><span class="field-label">Exit Year</span><input class="lbo-input" id="exit_year" type="number" value="5" /></div>
+        <div class="field-row"><span class="field-label">Fees % EV</span><input class="lbo-input" id="fees_pct" type="number" step="0.1" value="2.0" /></div>
+        <div class="section-kicker">Debt</div>
+        <div class="field-row">
+          <span class="field-label">Debt Sizing</span>
+          <select class="lbo-input" id="debt_sizing" style="text-align:left;" title="How Debt Amount is determined">
+            <option value="leverage" title="By Leverage Multiple">按倍数</option>
+            <option value="manual" title="Manual Debt Amount">手动债务</option>
+          </select>
+        </div>
+        <div class="field-row"><span class="field-label">Leverage Multiple</span><input class="lbo-input" id="leverage_multiple" type="number" step="0.1" value="5.0" /></div>
+        <div class="field-row"><span class="field-label" id="debt_amount_label">Debt Amount <span class="unit-tag">(USD mm)</span></span><input class="lbo-input" id="debt_amount" type="number" value="5000" /></div>
+        <div class="field-row" id="implied-leverage-row" style="display:none;"><span class="field-label">Implied Leverage</span><span class="lbo-readout" id="implied-leverage">n/a</span></div>
+        <div class="field-hint" id="debt-sizing-hint"></div>
+        <div class="field-row"><span class="field-label">Interest Rate</span><input class="lbo-input" id="interest_rate" type="number" step="0.1" value="9.0" /></div>
+        <div class="field-row"><span class="field-label">Mandatory Amort. %</span><input class="lbo-input" id="mandatory_amortization_pct" type="number" step="0.1" value="1.0" /></div>
+        <div class="field-row"><span class="field-label">Cash Sweep %</span><input class="lbo-input" id="cash_sweep_pct" type="number" step="0.1" value="100.0" /></div>
+        <div class="field-row"><span class="field-label">Cash to Balance Sheet <span class="unit-tag">(USD mm)</span></span><input class="lbo-input" id="cash_to_balance_sheet" type="number" value="0" /></div>
+        <div class="section-kicker">Capital Structure (V4.4)</div>
+        <div class="field-row">
+          <span class="field-label">Debt Structure</span>
+          <select class="lbo-input" id="debt_mode" style="text-align:left;" title="Debt structure mode">
+            <option value="single" title="Single-tranche simplified">单档债</option>
+            <option value="multi" title="Multi-tranche preset">多档债</option>
+          </select>
+        </div>
+        <div id="multi-tranche-inputs" style="display:none;">
+          <div id="tranche-editor"></div>
+          <div class="section-kicker">Cash & Covenants</div>
+          <div class="field-row"><span class="field-label">Beginning Cash <span class="linked-tag">(= Cash to Balance Sheet)</span></span><span class="lbo-readout" id="cash_balance_beginning_display">0</span></div>
+          <div class="field-row"><span class="field-label">Minimum Cash <span class="unit-tag">(USD mm)</span></span><input class="lbo-input" id="minimum_cash_balance" type="number" value="0" /></div>
+          <div class="field-row"><span class="field-label">Max Net Debt / EBITDA</span><input class="lbo-input" id="max_net_debt_ebitda" type="number" step="0.1" value="6.0" /></div>
+          <div class="field-row"><span class="field-label">Min Interest Coverage</span><input class="lbo-input" id="min_interest_coverage" type="number" step="0.1" value="2.0" /></div>
+        </div>
+        <div class="section-kicker">Operating Forecast</div>
+        <div class="forecast-mode-line">Forecast Mode: <span id="forecast-mode-indicator">Growth Forecast</span></div>
+        <div class="field-hint">Entry EBITDA sizes the transaction; forecast EBITDA drives debt paydown and exit value.<br>Entry EBITDA 用于交易定价；Forecast EBITDA 用于还债能力和退出价值。</div>
+        <div class="field-row"><span class="field-label">Revenue Y1 <span class="unit-tag">(USD mm)</span></span><input class="lbo-input" id="rev_y1" type="number" value="5000" /></div>
+        <div class="field-row"><span class="field-label">Revenue Growth %</span><input class="lbo-input" id="rev_growth" type="number" step="0.1" value="5.0" /></div>
+        <div class="field-row"><span class="field-label">EBITDA Margin %</span><input class="lbo-input" id="ebitda_margin" type="number" step="0.1" value="20.0" /></div>
+        <div class="field-row"><span class="field-label">Cash Taxes % EBITDA</span><input class="lbo-input" id="tax_pct_ebitda" type="number" step="0.1" value="10.0" /></div>
+        <div class="field-row"><span class="field-label">Tax Rate %</span><input class="lbo-input" id="tax_rate" type="number" step="0.1" value="25.0" /></div>
+        <div class="field-row">
+          <span class="field-label">Tax Shield</span>
+          <select class="lbo-input" id="tax_shield_enabled" style="text-align:left;" title="Tax shield uses cash interest x tax rate; no full tax schedule modeled.">
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+        <div class="field-hint">税盾按现金利息 × 税率计算；当前不建完整税表。</div>
+        <div class="field-row"><span class="field-label">CapEx % Revenue</span><input class="lbo-input" id="capex_pct_rev" type="number" step="0.1" value="3.0" /></div>
+        <div class="field-row"><span class="field-label">Change in NWC % Revenue</span><input class="lbo-input" id="nwc_pct_rev" type="number" step="0.1" value="0.4" /></div>
+        <div class="manual-forecast-banner">
+          <div class="manual-forecast-title">手动预测 / Manual Forecast</div>
+          <div class="manual-forecast-desc">逐年填写 Revenue、EBITDA、Cash Taxes、CapEx、NWC。</div>
+          <div class="manual-forecast-actions">
+            <button class="btn btn-secondary btn-sm" id="manual-forecast-btn" type="button">Edit Manual Forecast</button>
+            <button class="btn btn-secondary btn-sm" id="reset-growth-btn" type="button" style="display:none;">Reset to Growth Forecast</button>
+          </div>
+        </div>
+        <div class="lbo-action-row">
+          <button class="btn btn-primary" id="run-btn">Run LBO</button>
+          <button class="btn btn-secondary" id="defaults-btn">Load Defaults</button>
+          <button class="btn btn-secondary" id="scenarios-btn">Generate Scenarios</button>
+        </div>
+        <div class="scenario-export-active-hint" id="scenario-export-hint">Scenario Summary will be included in Excel export.</div>
+      </div>
+      <div class="card save-case-card" id="save-case-card">
+        <div class="card-title">保存当前 Case / Save Case</div>
+        <div class="export-desc">保存当前 LBO 输入参数，下次可继续编辑。</div>
+        <div class="save-case-actions">
+          <button class="btn btn-secondary" id="save-case-btn" type="button" style="width:100%;">Save Current Case</button>
+        </div>
+      </div>
+      <div class="card export-card" id="export-card">
+        <div class="card-title">导出专业工作簿 / Export LBO Workbook</div>
+        <div class="export-desc">导出包含 assumptions、debt schedule、covenants、returns attribution 和 audit disclosures 的 LBO workbook。</div>
+        <button class="btn btn-primary" id="excel-btn" style="width:100%;">Export LBO Workbook</button>
+        <div class="export-hint" id="export-hint">请先运行 LBO，再导出 Excel。</div>
+      </div>
+    </aside>
+
+    <section>
+      <div id="case-list-panel" class="case-list-panel"></div>
+      <div class="workspace-case-actions">
+        <button class="btn btn-secondary btn-sm" id="switch-case-btn" type="button">Switch Case</button>
+      </div>
+      <div id="error-panel" class="error-panel"></div>
+      <div id="suitability-panel" class="defaults-panel" style="display:none;"></div>
+      <div id="defaults-panel" class="defaults-panel"></div>
+      <div class="card">
+        <div class="card-title">Headline Returns</div>
+        <div class="headline-grid" id="headline-grid"></div>
+        <div id="return-context-badge" class="return-context-badge" style="display:none;"></div>
+        <div id="debt-stress-hint" class="debt-stress-hint" style="display:none;"></div>
+        <div class="sensitivity-trigger">
+          <div>
+            <div class="sensitivity-title">敏感性分析 / Sensitivity Analysis</div>
+            <div class="sensitivity-sub">Entry / exit multiple and leverage grids</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="sensitivity-btn" type="button">Open Sensitivity</button>
+        </div>
+      </div>
+      <div class="card" id="attribution-card" style="display:none;">
+        <div class="card-title">Returns Attribution / 回报来源拆解</div>
+        <div id="attribution-body"></div>
+      </div>
+      <div class="card" id="scenario-card" style="display:none;">
+        <div class="card-title">Scenario Comparison / 情景对比</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <div id="scenario-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Transaction Summary</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <table class="data-table" id="transaction-table"></table>
+      </div>
+      <div class="card">
+        <div class="card-title">Operating Forecast</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <div class="card-unit" id="forecast-active-note">Growth forecast active</div>
+        <table class="data-table" id="forecast-table"></table>
+      </div>
+      <div class="card" id="capstructure-card" style="display:none;">
+        <div class="card-title">Capital Structure Summary</div>
+        <table class="data-table" id="capstructure-table"></table>
+      </div>
+      <div class="card">
+        <div class="card-title" id="debt-card-title">Debt Schedule</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <div class="lbo-table-scroll">
+          <table class="data-table lbo-table" id="debt-table"></table>
+        </div>
+      </div>
+      <div class="card" id="covenant-card" style="display:none;">
+        <div class="card-title">Covenant Check</div>
+        <div id="covenant-status" style="margin-bottom:10px;"></div>
+        <div class="lbo-table-scroll">
+          <table class="data-table lbo-table" id="covenant-table"></table>
+        </div>
+        <div class="defaults-flags" style="margin-top:8px;">Uses forecast-year EBITDA. 使用预测年度 EBITDA。</div>
+      </div>
+      <div class="card" id="maturity-card" style="display:none;">
+        <div class="card-title">Maturity Wall</div>
+        <table class="data-table" id="maturity-table"></table>
+        <div class="defaults-flags" style="margin-top:8px;">Maturity wall shows debt outstanding at exit by maturity year, not original face value. Display / audit only; refinancing and maturity default are not modeled.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">退出股权价值桥 / Exit Equity Bridge</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <table class="data-table" id="exit-bridge-table"></table>
+      </div>
+      <div class="card">
+        <div class="card-title">Returns Summary</div>
+        <div class="card-unit" data-ccy-note>Amounts in USD mm</div>
+        <table class="data-table" id="returns-table"></table>
+      </div>
+      <div class="card">
+        <div class="card-title">Audit</div>
+        <ol class="audit-list" id="audit-list"></ol>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="manual-forecast-overlay" class="overlay" style="display:none;">
+  <div class="overlay-card">
+    <button class="overlay-close" id="manual-forecast-close" type="button" title="Close">×</button>
+    <div class="overlay-title">手动逐年预测 / Manual Year-by-Year Forecast</div>
+    <div class="overlay-sub" data-ccy-note>Amounts in USD mm</div>
+    <div class="overlay-table-scroll">
+      <table class="data-table" id="manual-forecast-table"></table>
+    </div>
+    <div class="overlay-actions">
+      <button class="btn btn-secondary" id="manual-forecast-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="manual-forecast-save" type="button">Save</button>
+    </div>
+  </div>
+</div>
+<div id="forecast-toast" class="forecast-toast" style="display:none;"></div>
+<div id="case-save-overlay" class="overlay" style="display:none;">
+  <div class="overlay-card" style="width:min(420px, 92vw);">
+    <button class="overlay-close" id="case-save-close" type="button" title="Close">×</button>
+    <div class="overlay-title">Case Name</div>
+    <div class="overlay-sub">Name this LBO case before saving.</div>
+    <input class="case-name-input" id="case-name-input" type="text" placeholder="AI DC Cooling Base Case" />
+    <div class="overlay-actions">
+      <button class="btn btn-secondary" id="case-save-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="case-save-confirm" type="button">Save</button>
+    </div>
+  </div>
+</div>
+<div id="case-switcher-overlay" class="overlay" style="display:none;">
+  <div class="case-switcher-card">
+    <button class="overlay-close" id="case-switcher-close" type="button" title="Close">×</button>
+    <div id="case-switcher-body"></div>
+  </div>
+</div>
+<div id="sensitivity-overlay" class="overlay" style="display:none;">
+  <div class="overlay-card" style="width:min(1120px, calc(100vw - 96px)); max-height:calc(100vh - 96px); overflow-y:auto;">
+    <button class="overlay-close" id="sensitivity-close" type="button" title="Close">x</button>
+    <div class="overlay-title">Sensitivity Analysis</div>
+    <div class="overlay-sub">Deterministic reruns using current LBO inputs. IRR / MOIC come from run_lbo output.</div>
+    <div class="sensitivity-stale" id="sensitivity-stale">Inputs changed. Reopen sensitivity to rebuild.</div>
+    <div id="sensitivity-body"></div>
+  </div>
+</div>
+<div id="case-toast" class="forecast-toast" style="display:none;"></div>
+
+<script src="/static/modeling/js/lbo.js"></script>
+</body>
+</html>

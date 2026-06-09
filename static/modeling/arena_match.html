@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Arena Match · 五回合牌局 — Match Table</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* V5.9.2 Match Table — the formal five-round match. Reuses the SAME deck /
+       precomputed pairs / calculate / Deal Ticket / Deal Review Queue as the
+       sandbox Play Table, and the SAME deterministic Robot Opponent. It ADDS the
+       game loop: two seated robots (difficulties fixed at setup — no in-game
+       difficulty selector), a turn-by-turn round flow, a local Match Points
+       scoreboard, and a settlement end screen. NO engine / API / synergy /
+       viability / merged-score change; Match Points is a local game score only. */
+    html, body { height: 100%; }
+    .match-body {
+      margin: 0; min-height: 100%; color: var(--text-primary);
+      background: radial-gradient(120% 90% at 50% 0%, #0a1830 0%, #060c18 55%, #03070f 100%);
+    }
+    .match-shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .match-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+      padding: 12px 22px; border-bottom: 1px solid rgba(120,170,255,0.14);
+      background: rgba(5,9,16,0.55); backdrop-filter: blur(5px);
+    }
+    .mt-brand .mt-logo { font-size: 15px; font-weight: 900; letter-spacing: 1.4px; color: var(--text-primary); }
+    .mt-brand .mt-sub { font-size: 11px; color: var(--text-muted); }
+    .mt-round { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .round-pill {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.4px; color: #0d1117;
+      background: linear-gradient(135deg, #e6bd5a, #d29922); border-radius: 999px; padding: 7px 16px; white-space: nowrap;
+    }
+    .match-top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .mtop-link {
+      font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;
+      color: var(--accent); border: 1px solid var(--border); border-radius: 7px; padding: 8px 13px; background: rgba(13,17,23,0.5);
+    }
+    .mtop-link:hover { border-color: var(--accent); }
+
+    #error-panel.error-panel {
+      display: none; margin: 10px 22px 0; border: 1px solid var(--red);
+      background: rgba(248,81,73,0.10); color: var(--text-primary); border-radius: 8px;
+      padding: 11px 14px; font-size: 13px; line-height: 1.5;
+    }
+
+    /* Scoreboard strip */
+    .scoreboard { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 22px 0; }
+    .score-chip {
+      display: flex; align-items: center; gap: 10px; flex: 1 1 200px; min-width: 180px;
+      background: linear-gradient(180deg, rgba(16,22,34,0.8), rgba(11,16,26,0.7));
+      border: 1px solid rgba(120,170,255,0.18); border-radius: 12px; padding: 11px 14px;
+    }
+    .score-chip.you { border-color: rgba(56,139,253,0.45); }
+    .score-chip.lead { box-shadow: 0 0 0 1px rgba(63,185,80,0.5), 0 0 20px rgba(63,185,80,0.12); }
+    /* V5.10.2 banker sigil on scoreboard chips */
+    .sc-sigil { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sc-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .sc-who-inline { flex-direction: row; gap: 0; }
+    .sc-name { font-size: 13px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sc-role { font-size: 10px; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase; }
+    /* V5.10.2.2: professional seat label — Name · Rank on one line (no rank pill). */
+    .sc-seat-label {
+      display: inline-flex; align-items: baseline; gap: 0; min-width: 0; max-width: 100%;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sc-seat-label .sc-name { flex: 0 1 auto; min-width: 0; }
+    .sc-rank-sep { flex-shrink: 0; color: rgba(139,148,158,0.82); font-weight: 600; font-size: 12px; }
+    .sc-rank { flex-shrink: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.15px; }
+    /* V5.10.2.1 banker rank colors — separate from card tier (--tier-color) */
+    .rank-intern { --rank-color: #c7d0da; --rank-glow: rgba(199,208,218,0.22); --rank-pill-text: #0d1117; }
+    .rank-analyst { --rank-color: #45c99a; --rank-glow: rgba(69,201,154,0.24); --rank-pill-text: #0d1117; }
+    .rank-associate { --rank-color: #58a6ff; --rank-glow: rgba(88,166,255,0.24); --rank-pill-text: #0d1117; }
+    .rank-vp { --rank-color: #e45b78; --rank-glow: rgba(228,91,120,0.26); --rank-pill-text: #fff; }
+    .rank-md { --rank-color: #e6bd5a; --rank-glow: rgba(230,189,90,0.30); --rank-pill-text: #1b1404; }
+    .score-chip[class*="rank-"] {
+      border-color: color-mix(in srgb, var(--rank-color) 42%, rgba(120,170,255,0.18));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rank-color) 14%, transparent), 0 0 14px var(--rank-glow);
+    }
+    .score-chip[class*="rank-"] .sc-seat-label .sc-rank { color: var(--rank-color); }
+    .score-chip.rank-md .sc-seat-label .sc-name { font-size: 14px; }
+    .sc-badge {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: #0d1117;
+      background: linear-gradient(135deg, #58a6ff, #3fb950); border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+    }
+    .sc-points { margin-left: auto; font-family: Consolas, monospace; font-size: 24px; font-weight: 800; color: var(--text-primary); }
+    .sc-points .sc-unit { font-size: 10px; color: var(--text-muted); margin-left: 3px; }
+
+    /* Robot seats row */
+    .seats-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; padding: 14px 22px 0; }
+    .mseat {
+      display: flex; align-items: center; gap: 12px;
+      background: linear-gradient(180deg, #1b2942, #0c1525);
+      border: 1px solid rgba(120,170,255,0.22); border-radius: 12px; padding: 10px 16px; min-width: 220px;
+    }
+    .mseat[class*="rank-"] {
+      border-color: color-mix(in srgb, var(--rank-color) 38%, rgba(120,170,255,0.22));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rank-color) 10%, transparent), 0 0 12px var(--rank-glow);
+    }
+    .mseat.active-turn { border-color: color-mix(in srgb, var(--rank-color, #e8c987) 55%, rgba(230,189,90,0.6));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--rank-color, #e8c987) 40%, rgba(230,189,90,0.4)), 0 0 18px var(--rank-glow, rgba(230,189,90,0.15)); }
+    .mseat.played { border-color: rgba(63,185,80,0.5); }
+    /* V5.10.2.3 (re-probe) seat presence: the avatar dot + ring BOTH mark ONLY the
+       CURRENT round winner — they move to whoever wins this round and clear on a
+       draw / next round (JS clears+reapplies each round). The cumulative total
+       leader is shown ONLY on the scoreboard chip glow (.score-chip.lead), never
+       as a seat dot, so a round-1 winner who stays the match leader no longer
+       welds a "winner" dot to their avatar across later rounds. */
+    .mseat.winner-emphasis { border-color: rgba(232,201,135,0.72);
+      box-shadow: 0 0 0 1px rgba(232,201,135,0.55), 0 0 22px rgba(232,201,135,0.18); }
+    .mseat.winner-emphasis .mseat-fig::after { content: ""; position: absolute; top: -2px; right: -2px; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--rank-color, #e8c987); box-shadow: 0 0 8px var(--rank-glow, rgba(232,201,135,0.6)); }
+    .mseat-fig { position: relative; width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .mseat-fig .oi-sigil { display: flex; line-height: 0; filter: drop-shadow(0 0 6px var(--rank-glow, transparent)); }
+    .mseat.thinking .mseat-fig { animation: seatThinkPulse 1.1s ease-in-out infinite; }
+    @keyframes seatThinkPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.1); }
+    }
+    .mseat-info { min-width: 0; }
+    .mseat-name { font-size: 13px; font-weight: 800; color: color-mix(in srgb, var(--rank-color, #ecd9ab) 50%, #ecd9ab); }
+    .mseat.rank-md .mseat-name { font-size: 14px; color: var(--rank-color); }
+    .mseat-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.55px; color: var(--rank-pill-text, #0d1117);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--rank-color, #58a6ff) 88%, #fff), var(--rank-color, #58a6ff));
+      border: 1px solid color-mix(in srgb, var(--rank-color, #58a6ff) 55%, transparent);
+      border-radius: 999px; padding: 3px 8px; margin-left: 6px; white-space: nowrap; }
+    .mseat-state { font-size: 10px; color: color-mix(in srgb, var(--rank-color, rgba(210,170,90,0.85)) 65%, rgba(210,170,90,0.85));
+      letter-spacing: 0.4px; text-transform: uppercase; margin-top: 3px; }
+
+    /* Turn bar */
+    .turn-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+      margin: 14px 22px 0; padding: 12px 16px;
+      background: linear-gradient(180deg, rgba(16,22,34,0.7), rgba(11,16,26,0.6));
+      border: 1px solid rgba(120,170,255,0.18); border-radius: 12px;
+    }
+    .turn-status { font-size: 12px; color: var(--text-muted); line-height: 1.4; flex: 1 1 220px; min-width: 180px; }
+    .turn-status b { color: var(--text-primary); }
+    .play-deal-btn {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; white-space: nowrap;
+      color: #0d1117; background: linear-gradient(135deg, #58a6ff, #3fb950); border: 0;
+      border-radius: 9px; padding: 10px 20px; box-shadow: 0 2px 14px rgba(56,139,253,0.3);
+    }
+    .play-deal-btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .play-deal-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    /* V5.9.3 playable-state chip next to Play Deal (small rule hint, not a panel) */
+    .play-state-chip { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap;
+      border-radius: 999px; padding: 5px 11px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-muted); }
+    .play-state-chip.ok { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .play-state-chip.blocked { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .play-state-chip.wait { color: var(--text-muted); }
+    .next-round-btn {
+      font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap;
+      color: #0d1117; background: linear-gradient(135deg, #e6bd5a, #d29922); border: 0;
+      border-radius: 9px; padding: 10px 20px;
+    }
+    .next-round-btn:hover { filter: brightness(1.08); }
+    /* V5.9.4 turn feedback log — deterministic, sequential opponent responses.
+       V5.10.1.1: once Showdown opens, the full sequence collapses to one compact
+       summary line so winner/result info is not triple-stacked with Showdown +
+       Round Result. During thinking/played the full sequence still fades in. */
+    .turn-feedback { flex: 1 1 100%; display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+    .turn-feedback.resolved { gap: 0; }
+    .tf-line { font-size: 12px; font-weight: 600; letter-spacing: 0.2px; color: var(--text-muted);
+      padding: 6px 11px; border: 1px solid var(--border); border-radius: 8px; background: rgba(13,17,23,0.5);
+      opacity: 0; transform: translateY(6px); transition: opacity 0.28s ease, transform 0.28s ease; }
+    .tf-line.in { opacity: 1; transform: none; }
+    .tf-line.out { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+    /* Compact post-Showdown summary — auxiliary status, not a second result panel. */
+    .tf-line.tf-summary { font-size: 11px; font-weight: 700; letter-spacing: 0.35px; color: rgba(232,201,135,0.88);
+      border-color: rgba(214,178,102,0.32); background: rgba(214,178,102,0.05); text-align: center; }
+    .tf-line.think { color: var(--text-muted); border-style: dashed; }
+    .tf-line.pos { color: var(--green); border-color: rgba(63,185,80,0.45); background: rgba(63,185,80,0.08); }
+    .tf-line.neg { color: #d29922; border-color: rgba(210,153,34,0.45); background: rgba(210,153,34,0.08); }
+    .tf-line.you { color: var(--accent); border-color: rgba(56,139,253,0.45); background: rgba(56,139,253,0.08); }
+    /* V5.9.4.1 winner feedback: a restrained amber accent on the round winner's
+       turn-log line (thin border + soft glow, not a bright fill). Display only —
+       it never touches Match Points / scoreboard / end screen. */
+    .tf-line.winner { color: #e8c987; font-weight: 700;
+      border-color: rgba(214,178,102,0.55);
+      background: linear-gradient(180deg, rgba(214,178,102,0.10), rgba(214,178,102,0.03));
+      box-shadow: inset 0 0 0 1px rgba(214,178,102,0.22), 0 0 14px rgba(214,178,102,0.12); }
+    .tf-winner-badge { display: inline-block; margin-left: 8px; vertical-align: 1px;
+      font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #e8c987;
+      border: 1px solid rgba(214,178,102,0.5); background: rgba(214,178,102,0.08);
+      border-radius: 999px; padding: 2px 9px; }
+
+    /* V5.9.4.1 (visual polish) round-transition retain modal — a spacious dark-glass
+       panel with a thin amber edge and soft glow. Opened ONLY when the player clicks
+       Keep & Next; it floats above a readable scrim and leaves the table / hand /
+       dock / scoreboard layout untouched. */
+    .retain-overlay { position: fixed; inset: 0; z-index: 55; display: flex;
+      align-items: center; justify-content: center; padding: 32px 18px; overflow-y: auto;
+      background: rgba(3,7,14,0.62); backdrop-filter: blur(3px); }
+    .retain-panel { width: 100%; max-width: 640px; overflow: hidden;
+      border: 1px solid rgba(214,178,102,0.34); border-radius: 18px;
+      background:
+        radial-gradient(120% 80% at 50% -8%, rgba(214,178,102,0.09), rgba(214,178,102,0) 55%),
+        linear-gradient(180deg, rgba(18,23,32,0.97), rgba(9,12,18,0.98));
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(214,178,102,0.10); }
+    .retain-hd { display: flex; align-items: flex-start; gap: 14px;
+      padding: 20px 24px 16px; border-bottom: 1px solid rgba(214,178,102,0.14); }
+    .retain-hd-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 auto; }
+    .retain-eyebrow { font-size: 10px; letter-spacing: 2.2px; text-transform: uppercase; font-weight: 700; color: rgba(214,178,102,0.85); }
+    .retain-title { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; color: var(--text-primary); }
+    .retain-count { align-self: center; font-family: Consolas, monospace; font-size: 12px; font-weight: 800; color: #e8c987;
+      border: 1px solid rgba(214,178,102,0.5); border-radius: 999px; padding: 5px 13px; white-space: nowrap; }
+    .retain-close { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 14px;
+      color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
+    .retain-close:hover { border-color: rgba(214,178,102,0.55); color: #e8c987; }
+    .retain-body { padding: 18px 24px 8px; }
+    .retain-note { font-size: 12px; line-height: 1.7; color: rgba(214,200,170,0.92);
+      border: 1px solid rgba(214,178,102,0.16); border-radius: 11px; padding: 12px 15px; background: rgba(214,178,102,0.04); }
+    .retain-note b { color: #e8c987; font-weight: 700; }
+    .retain-list-label { font-size: 10px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text-muted); margin: 18px 2px 11px; }
+    .retain-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 11px; }
+    .retain-chip { position: relative; display: flex; flex-direction: column; gap: 7px; text-align: left; cursor: pointer;
+      padding: 12px 13px 13px; border: 1px solid var(--border); border-radius: 13px; color: var(--text-muted);
+      background: linear-gradient(180deg, rgba(20,26,38,0.85), rgba(11,16,25,0.88));
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s; }
+    .retain-chip:hover { transform: translateY(-2px); }
+    /* Reuse the SAME arena tier color tokens as the hand cards (top accent bar). */
+    .retain-chip.arena-tier { border-color: color-mix(in srgb, var(--tier-color) 50%, var(--border));
+      background: linear-gradient(165deg, color-mix(in srgb, var(--tier-color) 20%, var(--bg-secondary)) 0%, var(--bg-secondary) 70%);
+      box-shadow: inset 0 3px 0 var(--tier-color); }
+    .retain-chip.retained { box-shadow: inset 0 3px 0 var(--tier-color), 0 0 0 1px rgba(63,185,80,0.75), 0 0 20px rgba(63,185,80,0.16); }
+    .retain-chip.retained::after { content: "✓"; position: absolute; top: 9px; right: 10px; font-size: 11px; font-weight: 800; color: var(--green); }
+    .retain-chip .rc-tier { align-self: flex-start; }
+    .retain-chip .rc-tk { font-family: Consolas, monospace; font-size: 15px; font-weight: 800; color: var(--text-primary); }
+    .retain-chip .rc-nm { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .retain-ft { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 16px 24px 20px; margin-top: 10px; border-top: 1px solid rgba(214,178,102,0.14); }
+    .retain-ft-hint { font-size: 11px; color: var(--text-muted); flex: 1 1 200px; line-height: 1.5; }
+    .retain-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .retain-cancel-btn { font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 9px; padding: 10px 16px; }
+    .retain-cancel-btn:hover { border-color: rgba(214,178,102,0.5); color: var(--text-primary); }
+    .retain-confirm-btn { font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap;
+      color: #1b1404; background: linear-gradient(135deg, #e8c987, #c79a4e);
+      border: 1px solid rgba(214,178,102,0.6); border-radius: 9px; padding: 10px 22px; box-shadow: 0 4px 18px rgba(214,178,102,0.22); }
+    .retain-confirm-btn:hover { filter: brightness(1.06); }
+
+    /* Main stage: table + side dock */
+    .match-main { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 16px; padding: 16px 22px 40px; align-items: start; }
+    @media (max-width: 1080px) { .match-main { grid-template-columns: 1fr; } }
+
+    .felt-stage { display: flex; justify-content: center; }
+    /* V5.10.1 Boardroom Noir: obsidian / dark-wood committee table (no green felt). */
+    .felt {
+      position: relative; width: 100%; max-width: 760px; min-height: 332px;
+      padding: 40px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 17px;
+      background:
+        radial-gradient(120% 70% at 50% 0%, rgba(232,201,135,0.10), transparent 55%),
+        linear-gradient(180deg, #16110b 0%, #10141d 40%, #0a0f17 100%);
+      border: 1px solid rgba(120,90,40,0.30); border-radius: 20px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 90px rgba(0,0,0,0.6),
+        0 26px 60px rgba(0,0,0,0.55);
+      overflow: hidden;
+    }
+    .felt::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+      background:
+        repeating-linear-gradient(90deg, rgba(180,160,120,0.05) 0 1px, transparent 1px 46px),
+        repeating-linear-gradient(0deg, rgba(180,160,120,0.04) 0 1px, transparent 1px 46px);
+      mask-image: radial-gradient(120% 80% at 50% 30%, #000 35%, transparent 80%); }
+    .felt::after { content: ""; position: absolute; left: 6%; right: 6%; bottom: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(232,201,135,0.55), transparent);
+      box-shadow: 0 0 24px rgba(232,201,135,0.3); pointer-events: none; }
+    .felt-label { position: absolute; top: 14px; left: 0; right: 0; text-align: center;
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(232,201,135,0.45); z-index: 1; }
+    .deal-zone { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 17px; align-items: stretch; width: 100%; max-width: 640px; }
+    .pslot { position: relative; min-width: 0; min-height: 128px;
+      background: rgba(7,12,18,0.66); border: 2px dashed rgba(255,255,255,0.18); border-radius: 14px; padding: 14px 16px; transition: all 0.15s; }
+    .pslot.acq { border-color: rgba(56,139,253,0.5); }
+    .pslot.tgt { border-color: rgba(210,153,34,0.5); }
+    .pslot.filled { border-style: solid; background: rgba(7,12,18,0.88); }
+    .pslot.acq.filled { box-shadow: 0 0 0 1px var(--accent), 0 0 26px rgba(56,139,253,0.25); }
+    .pslot.tgt.filled { box-shadow: 0 0 0 1px #d29922, 0 0 26px rgba(210,153,34,0.25); }
+    .pslot.drag-over { border-style: solid; border-color: var(--green); box-shadow: 0 0 0 1px var(--green), 0 0 26px rgba(63,185,80,0.3); }
+    .pslot-role { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; }
+    .pslot.acq .pslot-role { color: var(--accent); }
+    .pslot.tgt .pslot-role { color: #d29922; }
+    .pslot-body { margin-top: 13px; }
+    .pslot-empty { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; }
+    .pslot-ticker { font-family: Consolas, monospace; font-size: 23px; font-weight: 800; color: #fff; line-height: 1.1; }
+    .pslot-name { margin-top: 4px; font-size: 14.5px; font-weight: 700; color: rgba(255,255,255,0.92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pslot-sub { margin-top: 7px; font-size: 11.5px; font-weight: 700; color: var(--tier-color, rgba(255,255,255,0.6)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pslot-cap { margin-top: 9px; font-size: 11px; color: rgba(255,255,255,0.55); font-family: Consolas, monospace; }
+
+    .arena-tier { --tier-color: #c7d0da; --tier-glow: rgba(199,208,218,0.14); }
+    .tier-gold { --tier-color: #e6bd5a; --tier-glow: rgba(230,189,90,0.27); }
+    .tier-red { --tier-color: #e45b78; --tier-glow: rgba(228,91,120,0.24); }
+    .tier-blue { --tier-color: #58a6ff; --tier-glow: rgba(88,166,255,0.22); }
+    .tier-green { --tier-color: #45c99a; --tier-glow: rgba(69,201,154,0.21); }
+    .tier-white { --tier-color: #c7d0da; --tier-glow: rgba(199,208,218,0.15); }
+    .arena-tier-badge { display: inline-flex; align-items: center; gap: 5px; width: fit-content; color: var(--tier-color);
+      border: 1px solid color-mix(in srgb, var(--tier-color) 62%, transparent);
+      background: color-mix(in srgb, var(--tier-color) 10%, #0c1421); border-radius: 999px; padding: 2px 7px;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+    .arena-tier-badge::before, .tier-pip::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--tier-color); box-shadow: 0 0 8px var(--tier-glow); }
+    .slot-tier { margin-top: 8px; }
+    .pslot.arena-tier.filled {
+      background:
+        radial-gradient(120% 80% at 50% -10%, var(--tier-glow), transparent 60%),
+        linear-gradient(168deg, color-mix(in srgb, var(--tier-color) 18%, rgba(7,12,18,0.88)) 0%, rgba(7,12,18,0.9) 70%);
+      box-shadow: inset 0 3px 0 var(--tier-color), 0 0 24px var(--tier-glow); }
+    .pslot.arena-tier.acq.filled { box-shadow: 0 0 0 1px var(--accent), inset 0 3px 0 var(--tier-color), 0 0 26px rgba(56,139,253,0.25); }
+    .pslot.arena-tier.tgt.filled { box-shadow: 0 0 0 1px #d29922, inset 0 3px 0 var(--tier-color), 0 0 26px rgba(210,153,34,0.25); }
+    .tier-text { color: var(--tier-color) !important; text-shadow: 0 0 10px var(--tier-glow); }
+    .tier-pip { display: inline-flex; align-items: center; margin-right: 4px; vertical-align: 1px; }
+
+    .zone-center { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .zone-arrow { font-size: 18px; color: rgba(255,255,255,0.7); }
+    .preverse { width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+      background: rgba(7,12,18,0.7); border: 1px solid rgba(255,255,255,0.25); color: var(--accent);
+      font-size: 16px; display: flex; align-items: center; justify-content: center; transition: transform 0.25s, border-color 0.15s; }
+    .preverse:hover:not(:disabled) { transform: rotate(180deg); border-color: var(--accent); }
+    .preverse:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pclear { font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      color: var(--text-muted); background: rgba(7,12,18,0.65); border: 1px solid rgba(255,255,255,0.22); border-radius: 7px; padding: 6px 10px; }
+    .pclear:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent); }
+    .pclear:disabled { opacity: 0.35; cursor: not-allowed; }
+    .draw-pile { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 2px; }
+    .pile-stack { position: relative; width: 56px; height: 76px; cursor: pointer; }
+    .pile-card { position: absolute; inset: 0; border-radius: 9px;
+      background: repeating-linear-gradient(45deg, #18395a 0 7px, #102a42 7px 14px);
+      border: 1px solid rgba(120,170,255,0.42); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .pile-card:nth-child(1) { transform: translate(5px, 5px) rotate(5deg); }
+    .pile-card:nth-child(2) { transform: translate(2px, 2px) rotate(-3deg); }
+    .pile-stack:hover .pile-card:nth-child(3) { transform: translateY(-5px); }
+    .pile-stack:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 9px; }
+    .pile-stack.depleted { opacity: 0.4; cursor: not-allowed; }
+    .pile-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; }
+    .felt-hint { font-size: 12px; color: rgba(255,255,255,0.62); text-align: center; line-height: 1.5; max-width: 460px; }
+
+    /* Player hand */
+    .hand-rail { padding: 6px 22px 0; }
+    .hand-rail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .hand-rail-title { font-size: 12px; font-weight: 800; letter-spacing: 0.4px; color: var(--text-primary); }
+    .hand-rail-title span { color: var(--text-muted); font-weight: 600; }
+    .hand-controls { display: flex; gap: 8px; }
+    .pbtn { font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      color: var(--accent); background: rgba(13,17,23,0.6); border: 1px solid var(--border); border-radius: 7px; padding: 8px 13px; }
+    .pbtn:hover:not(:disabled) { border-color: var(--accent); }
+    .pbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .hand-fan { display: flex; justify-content: center; align-items: flex-end; gap: 0; padding: 14px 0 6px; min-height: 140px; flex-wrap: wrap; }
+    .pcard-shell { position: relative; flex: 0 0 auto; width: 170px; margin: 0 -18px; transform-origin: bottom center; transition: transform 0.15s ease; }
+    .pcard-shell:hover { z-index: 20 !important; }
+    .pcard { position: relative; width: 100%; text-align: left; transform-origin: bottom center;
+      background: linear-gradient(180deg, #1c2e49 0%, #0f1c30 100%);
+      border: 1px solid rgba(120,170,255,0.32); border-radius: 14px; padding: 14px 15px 15px; cursor: grab;
+      box-shadow: 0 18px 30px rgba(0,0,0,0.55); transition: transform 0.15s ease, box-shadow 0.15s, border-color 0.15s; }
+    .pcard:active { cursor: grabbing; }
+    .pcard-shell:hover .pcard { transform: translateY(-40px) scale(1.08); border-color: var(--accent); box-shadow: 0 30px 52px rgba(0,0,0,0.7); }
+    .pcard.dragging { opacity: 0.45; }
+    .pcard.drag-over { border-color: var(--green) !important; box-shadow: 0 0 0 1px var(--green), 0 0 22px rgba(63,185,80,0.35) !important; }
+    .pcard.sel-acq { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 16px 30px rgba(0,0,0,0.55); }
+    .pcard.sel-tgt { border-color: #d29922; box-shadow: 0 0 0 1px #d29922, 0 16px 30px rgba(0,0,0,0.55); }
+    .pcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    /* V5.9.6 tier SURFACE: replace the fixed blue card face with a per-tier wash
+       so the player's hand reads Legendary/Elite/Core/Specialist/Basic at a glance
+       (restrained, dark base; auto-derived from --tier-color / --tier-glow). */
+    .pcard.arena-tier { border-color: color-mix(in srgb, var(--tier-color) 72%, rgba(120,170,255,0.32));
+      background:
+        radial-gradient(135% 90% at 50% -10%, var(--tier-glow), transparent 58%),
+        linear-gradient(170deg,
+          color-mix(in srgb, var(--tier-color) 26%, #101a2b) 0%,
+          color-mix(in srgb, var(--tier-color) 10%, #0e1626) 52%,
+          #0c1320 100%);
+      box-shadow: inset 0 4px 0 var(--tier-color), 0 18px 30px rgba(0,0,0,0.55), 0 0 24px var(--tier-glow); }
+    .pcard-shell:hover .pcard.arena-tier { border-color: var(--tier-color);
+      box-shadow: inset 0 4px 0 var(--tier-color), 0 30px 52px rgba(0,0,0,0.7), 0 0 34px var(--tier-glow); }
+    /* V5.9.6.1 tier border priority: a selected card keeps its tier border; the
+       acquirer/target role is shown by the box-shadow ring (accent / amber), never
+       by overwriting the border with a generic color. This makes the border read
+       the same tier color in normal / hover / selected so a Legendary (gold) card
+       no longer flips to blue when picked as acquirer. */
+    .pcard.arena-tier.sel-acq { border-color: var(--tier-color); box-shadow: 0 0 0 1px var(--accent), inset 0 4px 0 var(--tier-color), 0 16px 30px rgba(0,0,0,0.55); }
+    .pcard.arena-tier.sel-tgt { border-color: var(--tier-color); box-shadow: 0 0 0 1px #d29922, inset 0 4px 0 var(--tier-color), 0 16px 30px rgba(0,0,0,0.55); }
+    .pcard-tier { margin-bottom: 8px; }
+    .pcard-ticker { font-family: Consolas, monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
+    .pcard-name { margin-top: 3px; font-size: 12px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pcard-sub { margin-top: 6px; font-size: 10.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pcard-cap { margin-top: 7px; font-size: 10.5px; color: var(--text-muted); font-family: Consolas, monospace; }
+    .pcard-cap b { color: var(--text-primary); }
+
+    /* Side dock cards */
+    .dock { display: flex; flex-direction: column; gap: 14px; }
+    .dock-card { background: linear-gradient(180deg, rgba(16,22,34,0.82), rgba(11,16,26,0.74));
+      border: 1px solid rgba(120,170,255,0.20); border-radius: 14px; padding: 15px 16px; }
+    .dock-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .dock-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+    .result-empty { font-size: 12px; color: var(--text-muted); line-height: 1.6; text-align: center; padding: 14px 4px 4px; }
+    .rc-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .rc-deal { font-size: 15px; font-weight: 700; font-family: Consolas, monospace; }
+    .rc-deal .rc-acq { color: var(--accent); } .rc-deal .rc-tgt { color: #d29922; } .rc-deal .rc-arrow { color: var(--text-muted); margin: 0 6px; }
+    .rc-eps { text-align: right; }
+    .rc-eps-val { font-family: Consolas, monospace; font-size: 28px; font-weight: 800; line-height: 1; }
+    .rc-eps-val.accretive { color: var(--green); } .rc-eps-val.dilutive { color: var(--red); }
+    .rc-eps-label { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+    .rc-mp { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+    .rc-mp-badge { font-family: Consolas, monospace; font-size: 14px; font-weight: 800; color: #e6bd5a;
+      border: 1px solid rgba(230,189,90,0.5); border-radius: 999px; padding: 3px 11px; }
+    .rc-mp-label { font-size: 10px; color: var(--text-muted); }
+    .rc-axis { margin-top: 13px; }
+    .rc-axis-label { font-size: 10px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 7px; }
+    .rc-axis-note { text-transform: none; letter-spacing: 0; font-size: 10px; opacity: 0.8; margin-left: 4px; }
+    .rc-axis-via { border-top: 1px dashed var(--border); padding-top: 11px; }
+    .rc-chips, .rc-viability-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+    .chip, .vchip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-muted); cursor: default; }
+    .chip.synergy-self { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .chip.synergy-supported { color: var(--accent); border-color: rgba(56,139,253,0.5); background: rgba(56,139,253,0.10); }
+    .chip.synergy-short { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .chip.econ-pos { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .chip.econ-neg { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .chip.pre-ppa { cursor: help; }
+    .vchip.level { font-weight: 700; }
+    .vchip.green { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .vchip.yellow { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .vchip.red { color: var(--red); border-color: rgba(248,81,73,0.5); background: rgba(248,81,73,0.10); }
+    .rc-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
+    .rc-ticket-btn { font-size: 12px; font-weight: 700; color: var(--accent); background: rgba(56,139,253,0.08);
+      border: 1px solid var(--accent); border-radius: 7px; padding: 9px 14px; cursor: pointer; text-align: center; }
+    .rc-ticket-btn:hover { background: rgba(56,139,253,0.16); }
+    .rc-queue-btn { font-size: 12px; font-weight: 700; color: var(--green); background: rgba(63,185,80,0.08);
+      border: 1px solid rgba(63,185,80,0.55); border-radius: 7px; padding: 9px 14px; cursor: pointer; text-align: center; }
+    .rc-queue-btn:hover:not(:disabled) { background: rgba(63,185,80,0.16); }
+    .rc-queue-btn:disabled { opacity: 0.55; cursor: default; }
+    .rc-studio-btn { font-size: 11px; color: var(--text-muted); text-decoration: none; text-align: center; }
+    .rc-studio-btn:hover { color: var(--accent); }
+
+    /* Round result compact panel */
+    .round-result { display: none; }
+    .round-result.show { display: block; }
+    .mr-winner { font-size: 13px; font-weight: 800; margin: 8px 0 10px; text-align: center; }
+    .mr-winner .mr-win-you { color: var(--green); } .mr-winner .mr-win-bot { color: #e6bd5a; } .mr-winner .mr-win-draw { color: var(--text-muted); }
+    .mr-list { display: flex; flex-direction: column; gap: 7px; }
+    .mr-row { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; align-items: center;
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: rgba(33,38,45,0.5); }
+    .mr-row.win { border-color: rgba(63,185,80,0.5); }
+    .mr-who-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; max-width: 42%; }
+    .mr-who { font-size: 11px; font-weight: 800; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mr-who.you { color: var(--accent); }
+    .mr-quote { font-size: 9.5px; line-height: 1.35; color: rgba(214,200,170,0.75); font-style: italic;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .mr-deal { font-family: Consolas, monospace; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mr-deal .a { color: var(--accent); } .mr-deal .t { color: #d29922; } .mr-deal .ar { color: var(--text-muted); margin: 0 4px; }
+    .mr-pts { font-family: Consolas, monospace; font-size: 14px; font-weight: 800; text-align: right; color: #e6bd5a; }
+
+    /* ── V5.10.1 The Showdown — three-way round-result reveal on the table ────────
+       Boardroom Noir: the obsidian deal table turns into a committee Showdown.
+       You / Banker 1 / Banker 2 each reveal one result card carrying the SAME
+       round-result fields the engine already produced (deal, EPS, MP, viability).
+       Committee amber lights the winner (ring + glow + WINNER mark); red/yellow/
+       green is ONLY deal viability; MP keeps its amber. Presentation only — it
+       reads existing Match Points and the existing round winner and changes no
+       rule, formula, or engine truth. */
+    .showdown-stage { width: 100%; max-width: 680px; }
+    .showdown-eyebrow { display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 10px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; color: #e8c987; margin-bottom: 15px; }
+    .showdown-eyebrow::before, .showdown-eyebrow::after { content: ""; height: 1px; flex: 1 1 40px; max-width: 120px;
+      background: linear-gradient(90deg, transparent, rgba(232,201,135,0.4), transparent); }
+    .showdown-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; align-items: stretch; }
+
+    .scard { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px;
+      padding: 15px 14px 14px; border: 1px solid rgba(120,170,255,0.20); border-radius: 14px;
+      background: linear-gradient(180deg, rgba(20,27,40,0.96), rgba(11,16,26,0.97));
+      box-shadow: 0 14px 30px rgba(0,0,0,0.5);
+      opacity: 0; transform: translateY(12px) rotateX(8deg); transform-origin: bottom center;
+      transition: opacity 0.42s ease, transform 0.42s ease, border-color 0.42s ease, box-shadow 0.42s ease; }
+    .scard.revealed { opacity: 1; transform: none; }
+    /* owner role accent bar: blue = you, neutral steel = bankers (no green here) */
+    .scard.owner-you { box-shadow: inset 0 3px 0 var(--accent), 0 14px 30px rgba(0,0,0,0.5); }
+    .scard.owner-bot { box-shadow: inset 0 3px 0 #5b6b82, 0 14px 30px rgba(0,0,0,0.5); }
+    .scard.owner-bot[class*="rank-"] { box-shadow: inset 0 3px 0 var(--rank-color), 0 14px 30px rgba(0,0,0,0.5); }
+    /* losers dim modestly — never so dark they cannot be read */
+    .scard.dim { opacity: 0.62; filter: saturate(0.85); }
+    /* winner: committee-amber inner ring + soft glow (a restrained spotlight) */
+    .scard.winner { border-color: rgba(232,201,135,0.65);
+      box-shadow: inset 0 0 0 1px rgba(232,201,135,0.55), 0 0 28px rgba(232,201,135,0.22), 0 14px 30px rgba(0,0,0,0.5); }
+    .scard.winner.owner-you { box-shadow: inset 0 3px 0 var(--accent), inset 0 0 0 1px rgba(232,201,135,0.55), 0 0 28px rgba(232,201,135,0.22), 0 14px 30px rgba(0,0,0,0.5); }
+    .scard-crown { position: absolute; top: -12px; left: 50%; transform: translateX(-50%) scale(0);
+      font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: #1b1404; white-space: nowrap;
+      background: linear-gradient(135deg, #e8c987, #d29922); border-radius: 999px; padding: 3px 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: transform 0.35s cubic-bezier(.2,1.4,.5,1); z-index: 3; }
+    .scard.winner .scard-crown { transform: translateX(-50%) scale(1); }
+
+    .scard-owner { font-size: 11.5px; font-weight: 800; color: var(--text-muted); line-height: 1.35;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scard-owner.you { color: var(--accent); }
+    .scard-owner-name { color: color-mix(in srgb, var(--rank-color, #ecd9ab) 45%, #ecd9ab); }
+    .scard.rank-md .scard-owner-name { color: var(--rank-color); }
+    .scard-owner-rank { color: var(--rank-color, var(--text-muted)); font-weight: 700; font-size: 10.5px; }
+    .scard-line { font-size: 11px; line-height: 1.5; color: rgba(214,200,170,0.88);
+      font-style: italic; margin-top: 3px; padding-top: 7px; border-top: 1px solid rgba(120,170,255,0.12);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .scard-deal { font-family: Consolas, monospace; font-size: 16px; font-weight: 800; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scard-deal .a { color: var(--accent); } .scard-deal .t { color: #d29922; } .scard-deal .ar { color: var(--text-muted); margin: 0 5px; }
+    .scard-sub { font-size: 11px; color: var(--text-muted); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scard-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 11px; margin-top: 4px; }
+    .scard-eps-wrap { min-width: 0; }
+    .scard-eps { font-family: Consolas, monospace; font-size: 25px; font-weight: 800; line-height: 1.05; }
+    .scard-eps.accretive { color: var(--green); } .scard-eps.dilutive { color: var(--red); }
+    .scard-eps.na { color: var(--text-muted); font-size: 16px; }
+    .scard-eps-lbl { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 5px; }
+    .scard-mp { font-family: Consolas, monospace; font-size: 13.5px; font-weight: 800; color: #e6bd5a; white-space: nowrap;
+      border: 1px solid rgba(230,189,90,0.5); background: rgba(230,189,90,0.07); border-radius: 999px; padding: 5px 11px; }
+    .scard-mp.pop { animation: scMpPop 0.5s ease; }
+    @keyframes scMpPop { 0% { transform: scale(1); } 40% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    .scard-foot { display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 5px; }
+    .scard-via { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
+    .scard-via .via-lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .scard-via.green { color: var(--green); } .scard-via.green .via-lamp { background: var(--green); box-shadow: 0 0 9px rgba(63,185,80,0.6); }
+    .scard-via.yellow { color: #d29922; } .scard-via.yellow .via-lamp { background: #d29922; box-shadow: 0 0 9px rgba(210,153,34,0.6); }
+    .scard-via.red { color: var(--red); } .scard-via.red .via-lamp { background: var(--red); box-shadow: 0 0 9px rgba(248,81,73,0.6); }
+    .scard-empty { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .showdown-verdict { text-align: center; margin-top: 14px; min-height: 20px; }
+    .sv-line { font-size: 14px; font-weight: 800; color: var(--text-primary);
+      opacity: 0; transform: translateY(6px); transition: opacity 0.45s ease, transform 0.45s ease; }
+    .sv-line.in { opacity: 1; transform: none; }
+    .sv-line .hl { color: #e8c987; }
+    .sv-line.draw { color: var(--text-muted); }
+    .showdown-foot { margin-top: 12px; text-align: center; font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+
+    /* Narrow screens (e.g. 390×844): stack the three cards so the table never
+       overflows horizontally; min-width:0 + ellipsis above keep long text in. */
+    @media (max-width: 620px) { .showdown-grid { grid-template-columns: 1fr; } }
+
+    /* Motion safety: reduced-motion users get the result with no flip-up / pop /
+       count-roll transforms — the cards appear revealed and MP shows final value. */
+    @media (prefers-reduced-motion: reduce) {
+      .scard { transition: none; opacity: 1; transform: none; }
+      .scard-crown { transition: none; }
+      .scard-mp.pop { animation: none; }
+      .sv-line { transition: none; opacity: 1; transform: none; }
+      .tf-line.out { transition: none; opacity: 0; transform: none; }
+    }
+
+    /* Queue panel (reused light shape) */
+    .queue-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 4px;
+      font-family: Consolas, monospace; font-size: 10px; font-weight: 800; color: #0d1117; background: var(--green); border-radius: 999px; }
+    .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 11px; }
+    .queue-empty { font-size: 11px; color: var(--text-muted); line-height: 1.6; padding: 10px 4px; text-align: center; }
+    .q-row { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 8px; align-items: center;
+      padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: rgba(33,38,45,0.6); cursor: pointer; }
+    .q-row:hover { border-color: var(--green); }
+    .q-seq { font-family: Consolas, monospace; font-size: 11px; font-weight: 800; color: var(--text-muted); }
+    .q-deal { font-family: Consolas, monospace; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .q-deal .a { color: var(--accent); } .q-deal .t { color: #d29922; } .q-deal .ar { color: var(--text-muted); margin: 0 4px; }
+    .q-eps { font-family: Consolas, monospace; font-size: 12px; font-weight: 800; text-align: right; }
+    .q-eps.accretive { color: var(--green); } .q-eps.dilutive { color: var(--red); } .q-eps.na { color: var(--text-muted); font-size: 10px; }
+    .q-remove { font-size: 12px; font-weight: 700; color: var(--text-muted); line-height: 1;
+      background: transparent; border: 1px solid var(--border); border-radius: 6px; width: 24px; height: 24px; cursor: pointer; }
+    .q-remove:hover { border-color: var(--red); color: var(--red); }
+
+    /* Deal Ticket overlay (same ids/render as War Room) */
+    .ticket-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(1,4,9,0.8);
+      display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+    .ticket-panel { width: 100%; max-width: 640px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); display: flex; flex-direction: column; max-height: calc(100vh - 80px); }
+    .ticket-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .ticket-title { font-size: 15px; font-weight: 800; color: var(--text-primary); font-family: Consolas, monospace; }
+    .ticket-close { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+    .ticket-close:hover { border-color: var(--accent); color: var(--accent); }
+    .ticket-scroll { padding: 18px 20px; overflow-y: auto; }
+    .ticket-loading, .ticket-error { padding: 30px; text-align: center; font-size: 13px; }
+    .ticket-loading { color: var(--text-muted); } .ticket-error { color: var(--red); line-height: 1.5; }
+    .tk-sec { margin-bottom: 22px; } .tk-sec:last-child { margin-bottom: 0; }
+    .tk-sec-title { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 11px; border-left: 2px solid var(--accent); padding-left: 8px; }
+    .tk-sec-note { text-transform: none; letter-spacing: 0; font-size: 10px; opacity: 0.8; margin-left: 6px; }
+    .tk-summary { display: flex; flex-direction: column; gap: 13px; }
+    .tk-eps-val { font-family: Consolas, monospace; font-size: 28px; font-weight: 800; }
+    .tk-eps-val.accretive { color: var(--green); } .tk-eps-val.dilutive { color: var(--red); }
+    .tk-eps-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .tk-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .tk-cell { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .tk-cell-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; }
+    .tk-cell-value { font-family: Consolas, monospace; font-size: 16px; font-weight: 700; color: var(--text-primary); margin-top: 4px; }
+    .tk-cell-sub { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+    .via-level { display: inline-block; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px; margin-bottom: 8px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-muted); }
+    .via-level.green { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .via-level.yellow { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .via-level.red { color: var(--red); border-color: rgba(248,81,73,0.5); background: rgba(248,81,73,0.10); }
+    .tk-via-summary { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px; }
+    .tk-via-flags { display: flex; flex-direction: column; gap: 8px; }
+    .tk-flag { border: 1px solid var(--border); border-left-width: 3px; border-radius: 6px; padding: 9px 12px; background: var(--bg-tertiary); }
+    .tk-flag.red { border-left-color: var(--red); } .tk-flag.yellow { border-left-color: #d29922; } .tk-flag.green { border-left-color: var(--green); }
+    .tk-flag-title { font-size: 13px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tk-flag-cat { font-size: 10px; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+    .tk-flag-msg { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; }
+    .tk-flag-reason { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.45; }
+    .tk-flag-sev { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
+    .tk-flag-sev.red { color: var(--red); border-color: rgba(248,81,73,0.45); }
+    .tk-flag-sev.yellow { color: #d29922; border-color: rgba(210,153,34,0.45); }
+    .tk-flag-sev.green { color: var(--green); border-color: rgba(63,185,80,0.45); }
+    .tk-flag-audit { margin-top: 8px; font-size: 10px; color: var(--text-muted); opacity: 0.85; }
+    .tk-flag-audit summary { cursor: pointer; font-weight: 600; letter-spacing: 0.2px; }
+    .tk-flag-audit-body { margin-top: 5px; font-family: Consolas, monospace; word-break: break-word; line-height: 1.5; }
+    .ticket-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--border); }
+    .ticket-foot-note { font-size: 10px; color: var(--text-muted); max-width: 320px; line-height: 1.5; }
+    .ticket-foot .rc-studio-btn { font-weight: 700; color: #0d1117; background: var(--accent); border-radius: 6px; padding: 9px 16px; }
+    .ticket-foot .rc-studio-btn:hover { background: #5aa0ff; color: #0d1117; }
+    .ticket-foot-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tk-queue-btn { font-size: 12px; font-weight: 700; color: var(--green); background: transparent; border: 1px solid rgba(63,185,80,0.55); border-radius: 6px; padding: 9px 16px; cursor: pointer; white-space: nowrap; }
+    .tk-queue-btn:hover:not(:disabled) { background: rgba(63,185,80,0.12); }
+    .tk-queue-btn:disabled { opacity: 0.55; cursor: default; }
+
+    /* ── End Screen / settlement ─────────────────────────────────────────────── */
+    .end-screen { position: fixed; inset: 0; z-index: 60; background: rgba(1,4,9,0.86); backdrop-filter: blur(4px);
+      display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+    .end-panel { width: 100%; max-width: 720px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,0.6); padding: 26px 26px 22px; }
+    .end-calc { text-align: center; font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.4px; padding: 24px 0; }
+    .end-calc .dots::after { content: ""; animation: endDots 1.1s steps(4, end) infinite; }
+    @keyframes endDots { 0% { content: ""; } 25% { content: "·"; } 50% { content: "··"; } 75% { content: "···"; } 100% { content: ""; } }
+    .reveal { opacity: 0; transform: translateY(10px); transition: opacity 0.45s ease, transform 0.45s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+    .end-title { text-align: center; font-size: 18px; font-weight: 900; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .end-sub { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+    .end-rounds { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .end-round-row { display: grid; grid-template-columns: 60px 1fr 1fr 1fr; gap: 8px; align-items: center;
+      padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: rgba(33,38,45,0.5); }
+    .erh { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .er-label { font-size: 12px; font-weight: 800; color: var(--text-muted); }
+    .er-cell { font-family: Consolas, monospace; font-size: 12px; }
+    .er-cell .who { font-size: 10px; color: var(--text-muted); }
+    .er-cell .pts { font-weight: 800; }
+    .er-cell.win { color: var(--green); }
+    .end-totals { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .et-chip { flex: 1 1 180px; display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      border: 1px solid var(--border); border-radius: 12px; background: rgba(33,38,45,0.5); }
+    .et-chip.winner { border-color: rgba(63,185,80,0.6); box-shadow: 0 0 0 1px rgba(63,185,80,0.4), 0 0 20px rgba(63,185,80,0.12); }
+    .et-name { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+    .et-pts { margin-left: auto; font-family: Consolas, monospace; font-size: 22px; font-weight: 800; color: #e6bd5a; }
+    .end-winner { text-align: center; font-size: 22px; font-weight: 900; letter-spacing: 0.6px; margin: 6px 0 18px; }
+    .end-winner.you { color: var(--green); } .end-winner.bot { color: #e6bd5a; } .end-winner.draw { color: var(--text-muted); }
+    .end-review-title { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin: 6px 0 10px; }
+    .end-review { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+    .er-part { border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px; background: rgba(33,38,45,0.4); }
+    .er-part-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
+    .er-part-name { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+    .er-part-total { margin-left: auto; font-family: Consolas, monospace; font-size: 13px; font-weight: 800; color: #e6bd5a; }
+    .er-part-best { font-size: 11px; color: var(--text-muted); }
+    .er-part-best b { color: var(--green); }
+    .er-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .deal-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 8px;
+      border: 1px solid var(--border); background: rgba(13,17,23,0.6); cursor: pointer; }
+    .deal-chip:hover { border-color: var(--accent); }
+    .deal-chip .dc-deal { font-family: Consolas, monospace; font-size: 11px; font-weight: 700; }
+    .deal-chip .dc-deal .a { color: var(--accent); } .deal-chip .dc-deal .t { color: #d29922; } .deal-chip .dc-deal .ar { color: var(--text-muted); margin: 0 3px; }
+    .deal-chip .dc-eps { font-family: Consolas, monospace; font-size: 10px; }
+    .deal-chip .dc-eps.accretive { color: var(--green); } .deal-chip .dc-eps.dilutive { color: var(--red); } .deal-chip .dc-eps.na { color: var(--text-muted); }
+    .dc-vtag { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); }
+    .dc-vtag.green { color: var(--green); border-color: rgba(63,185,80,0.5); }
+    .dc-vtag.yellow { color: #d29922; border-color: rgba(210,153,34,0.5); }
+    .dc-vtag.red { color: var(--red); border-color: rgba(248,81,73,0.5); }
+    .dc-mp { font-family: Consolas, monospace; font-size: 10px; font-weight: 800; color: #e6bd5a; }
+    .end-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+    .end-btn { font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; border-radius: 9px; padding: 11px 20px; border: 1px solid var(--border); }
+    .end-btn.primary { color: #0d1117; background: linear-gradient(135deg, #58a6ff, #3fb950); border: 0; }
+    .end-btn.primary:hover { filter: brightness(1.08); }
+    .end-btn.queue { color: var(--green); background: transparent; border-color: rgba(63,185,80,0.55); }
+    .end-btn.queue:hover:not(:disabled) { background: rgba(63,185,80,0.12); }
+    .end-btn.queue:disabled { opacity: 0.55; cursor: default; }
+    .end-btn.ghost { color: var(--text-muted); background: var(--bg-tertiary); }
+    .end-btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .end-note { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; margin-top: 14px; }
+
+    /* ── V5.10.3 Match Ceremony / Verdict End Screen ─────────────────────────
+       The end screen reads as a committee verdict, not a results table. Boardroom
+       Noir + committee amber for the winner / spotlight / Match Points; red/yellow/
+       green stays viability-only. Restrained: a spotlight ring + amber glow, never
+       a celebration burst or casino reel. Presentation only — every value is read from the
+       existing match state (rankings / winner / round records / bestDealFor). */
+    .verdict { text-align: center; }
+    .verdict-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 2.6px; text-transform: uppercase;
+      color: rgba(232,201,135,0.85); margin-bottom: 14px; }
+    .verdict-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+      padding: 26px 18px 24px; margin-bottom: 22px; border-radius: 18px; overflow: hidden;
+      border: 1px solid rgba(232,201,135,0.30);
+      background:
+        radial-gradient(120% 90% at 50% -10%, rgba(232,201,135,0.16), rgba(232,201,135,0) 60%),
+        linear-gradient(180deg, rgba(22,17,11,0.96), rgba(10,13,20,0.97));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 80px rgba(0,0,0,0.55), 0 0 34px rgba(232,201,135,0.10); }
+    /* The spotlight: a soft committee-amber cone falling on the winner. */
+    .verdict-stage::before { content: ""; position: absolute; top: -40%; left: 50%; width: 220px; height: 220px;
+      transform: translateX(-50%); pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(232,201,135,0.22), rgba(232,201,135,0) 70%); }
+    .verdict-stage.win-you::before { background: radial-gradient(circle at 50% 50%, rgba(56,139,253,0.22), rgba(56,139,253,0) 70%); }
+    .verdict-stage.win-draw::before { background: radial-gradient(circle at 50% 50%, rgba(139,148,158,0.16), rgba(139,148,158,0) 70%); }
+    .verdict-sigil { position: relative; display: flex; align-items: center; justify-content: center;
+      width: 64px; height: 64px; border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(232,201,135,0.5), 0 0 26px rgba(232,201,135,0.28); }
+    .verdict-sigil:empty { display: none; }
+    .verdict-sigil .oi-sigil { line-height: 0; filter: drop-shadow(0 0 8px rgba(232,201,135,0.4)); }
+    .verdict-stage .end-winner { margin: 4px 0 2px; }
+    .verdict-score { font-family: Consolas, monospace; font-size: 13px; font-weight: 700; color: rgba(236,217,171,0.9);
+      letter-spacing: 0.4px; }
+    .verdict-line { max-width: 460px; font-size: 13px; font-style: italic; line-height: 1.6; color: rgba(232,201,135,0.92);
+      margin-top: 6px; }
+    .verdict-line:empty { display: none; }
+
+    .end-section-label { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: rgba(232,201,135,0.7);
+      margin: 4px 2px 12px; text-align: left; }
+
+    /* Five-round trajectory: 5 nodes on a thin rail, each showing the round winner
+       + that winner's MP. The match winner's winning nodes carry a subtle ring. */
+    .end-trajectory { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px; margin-bottom: 24px; padding: 6px 2px 2px; }
+    .end-trajectory::before { content: ""; position: absolute; top: 24px; left: 8%; right: 8%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(232,201,135,0.28), transparent); z-index: 0; }
+    .traj-node { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+      min-width: 0; text-align: center; }
+    .traj-round { font-size: 9px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); }
+    .traj-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: Consolas, monospace; font-size: 12px; font-weight: 800; color: var(--text-primary);
+      border: 1px solid var(--border); background: rgba(13,17,23,0.85); }
+    .traj-node.win-you .traj-dot { border-color: rgba(56,139,253,0.6); color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,139,253,0.4), 0 0 14px rgba(56,139,253,0.18); }
+    .traj-node.win-bot .traj-dot { border-color: color-mix(in srgb, var(--rank-color, #e6bd5a) 60%, var(--border));
+      color: var(--rank-color, #e6bd5a);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--rank-color, #e6bd5a) 35%, transparent), 0 0 14px var(--rank-glow, rgba(230,189,90,0.18)); }
+    .traj-node.win-draw .traj-dot { color: var(--text-muted); }
+    /* Subtle emphasis: a node won by the eventual match winner gets an amber ring. */
+    .traj-node.match-winner .traj-dot { box-shadow: 0 0 0 2px rgba(232,201,135,0.55), 0 0 16px rgba(232,201,135,0.22); }
+    .traj-who { font-size: 10px; font-weight: 700; color: var(--text-muted); max-width: 100%;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .traj-node.win-you .traj-who { color: var(--accent); }
+    .traj-node.win-bot .traj-who { color: color-mix(in srgb, var(--rank-color, #e6bd5a) 55%, #ecd9ab); }
+    .traj-mp { font-family: Consolas, monospace; font-size: 11px; font-weight: 800; color: #e6bd5a; }
+    .traj-mp.draw { color: var(--text-muted); }
+
+    /* Best deals: one highlight card per participant; the overall top-MP deal is
+       the "Deal of the Match". Player card blue, banker cards rank-colored. */
+    .end-best-deals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .best-card { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 7px;
+      padding: 14px 13px 13px; border: 1px solid var(--border); border-radius: 13px;
+      background: linear-gradient(180deg, rgba(20,27,40,0.92), rgba(11,16,26,0.95)); }
+    .best-card.owner-you { box-shadow: inset 0 3px 0 var(--accent); border-color: rgba(56,139,253,0.4); }
+    .best-card.owner-bot { box-shadow: inset 0 3px 0 var(--rank-color, #5b6b82);
+      border-color: color-mix(in srgb, var(--rank-color, #5b6b82) 40%, var(--border)); }
+    .best-card.dom { border-color: rgba(232,201,135,0.6);
+      box-shadow: inset 0 3px 0 var(--rank-color, #e6bd5a), 0 0 0 1px rgba(232,201,135,0.4), 0 0 22px rgba(232,201,135,0.16); }
+    .best-card.dom.owner-you { box-shadow: inset 0 3px 0 var(--accent), 0 0 0 1px rgba(232,201,135,0.4), 0 0 22px rgba(232,201,135,0.16); }
+    .best-dom-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #1b1404;
+      background: linear-gradient(135deg, #e8c987, #d29922); border-radius: 999px; padding: 3px 11px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .best-owner { font-size: 11.5px; font-weight: 800; color: var(--text-muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .best-owner.you { color: var(--accent); }
+    .best-owner-name { color: color-mix(in srgb, var(--rank-color, #ecd9ab) 50%, #ecd9ab); }
+    .best-owner-rank { color: var(--rank-color, var(--text-muted)); font-weight: 700; font-size: 10.5px; }
+    .best-deal { font-family: Consolas, monospace; font-size: 15px; font-weight: 800; line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .best-deal .a { color: var(--accent); } .best-deal .t { color: #d29922; } .best-deal .ar { color: var(--text-muted); margin: 0 5px; }
+    .best-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 2px; }
+    .best-eps { font-family: Consolas, monospace; font-size: 21px; font-weight: 800; line-height: 1.05; }
+    .best-eps.accretive { color: var(--green); } .best-eps.dilutive { color: var(--red); } .best-eps.na { color: var(--text-muted); font-size: 14px; }
+    .best-eps-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
+    .best-mp { font-family: Consolas, monospace; font-size: 13px; font-weight: 800; color: #e6bd5a; white-space: nowrap;
+      border: 1px solid rgba(230,189,90,0.5); background: rgba(230,189,90,0.07); border-radius: 999px; padding: 4px 10px; }
+    .best-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .best-via { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
+    .best-via .via-lamp { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .best-via.green { color: var(--green); } .best-via.green .via-lamp { background: var(--green); box-shadow: 0 0 8px rgba(63,185,80,0.6); }
+    .best-via.yellow { color: #d29922; } .best-via.yellow .via-lamp { background: #d29922; box-shadow: 0 0 8px rgba(210,153,34,0.6); }
+    .best-via.red { color: var(--red); } .best-via.red .via-lamp { background: var(--red); box-shadow: 0 0 8px rgba(248,81,73,0.6); }
+    .best-empty { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Detailed review collapsed by default — the trajectory + best deals are the
+       main view; all 15 played deals remain available on demand (info preserved). */
+    .end-review-details { border: 1px solid var(--border); border-radius: 12px; background: rgba(33,38,45,0.35);
+      margin-bottom: 18px; overflow: hidden; }
+    .end-review-summary { cursor: pointer; list-style: none; padding: 13px 16px; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.3px; color: rgba(232,201,135,0.85); user-select: none; }
+    .end-review-summary::-webkit-details-marker { display: none; }
+    .end-review-summary::after { content: "▾"; float: right; color: var(--text-muted); transition: transform 0.2s; }
+    .end-review-details[open] .end-review-summary::after { transform: rotate(180deg); }
+    .end-review-inner { padding: 4px 16px 16px; }
+    .end-review-inner .end-rounds { margin-top: 6px; }
+
+    /* Narrow / mobile (≤620px): best-deal cards stack; the 5-node trajectory stays
+       a single row of compact nodes (min-width:0 + ellipsis prevent overflow). */
+    @media (max-width: 620px) {
+      .end-best-deals { grid-template-columns: 1fr; }
+      .end-trajectory { gap: 4px; }
+      .traj-dot { width: 30px; height: 30px; font-size: 11px; }
+      .end-trajectory::before { top: 22px; }
+    }
+  </style>
+</head>
+<body class="match-body">
+
+<div class="match-shell">
+  <div class="match-top">
+    <div class="mt-brand">
+      <div class="mt-logo">DEAL ARENA · MATCH</div>
+      <div class="mt-sub">五回合并购牌局 · 把买方牌拖到标的牌上出牌（A → B = A 收购 B）</div>
+    </div>
+    <div class="mt-round">
+      <span class="round-pill" id="match-round-pill">回合 1 / 5</span>
+    </div>
+    <div class="match-top-actions">
+      <a class="mtop-link" href="/modeling/ma/arena/match/setup">↺ 重新设置 · Setup</a>
+      <a class="mtop-link" href="/modeling/ma/arena">← 备战区 · War Room</a>
+    </div>
+  </div>
+
+  <div id="error-panel" class="error-panel"></div>
+
+  <!-- Match Points scoreboard (local game score only — never a merged total) -->
+  <div class="scoreboard" id="scoreboard">
+    <div class="score-chip you" id="score-chip-player">
+      <div class="sc-who"><span class="sc-name">你 · You</span><span class="sc-role">Player</span></div>
+      <span class="sc-points"><span id="score-player">0</span><span class="sc-unit">MP</span></span>
+    </div>
+    <div class="score-chip" id="score-chip-robot-1">
+      <span class="sc-sigil" id="score-sigil-robot-1" aria-hidden="true"></span>
+      <div class="sc-who sc-who-inline">
+        <span class="sc-seat-label" id="score-seat-robot-1">
+          <span class="sc-name" id="score-name-robot-1">对手 · 席位 1</span><span class="sc-rank-sep" aria-hidden="true"> · </span><span class="sc-rank" id="score-rank-robot-1">—</span>
+        </span>
+      </div>
+      <span class="sc-points"><span id="score-robot-1">0</span><span class="sc-unit">MP</span></span>
+    </div>
+    <div class="score-chip" id="score-chip-robot-2">
+      <span class="sc-sigil" id="score-sigil-robot-2" aria-hidden="true"></span>
+      <div class="sc-who sc-who-inline">
+        <span class="sc-seat-label" id="score-seat-robot-2">
+          <span class="sc-name" id="score-name-robot-2">对手 · 席位 2</span><span class="sc-rank-sep" aria-hidden="true"> · </span><span class="sc-rank" id="score-rank-robot-2">—</span>
+        </span>
+      </div>
+      <span class="sc-points"><span id="score-robot-2">0</span><span class="sc-unit">MP</span></span>
+    </div>
+  </div>
+
+  <!-- Two seated robot opponents (difficulty fixed at setup) -->
+  <div class="seats-row">
+    <div class="mseat" id="seat-robot-1">
+      <div class="mseat-fig" id="seat-fig-1" aria-hidden="true"></div>
+      <div class="mseat-info">
+        <div class="mseat-name"><span id="seat-name-1">对手</span> <span class="mseat-badge" id="seat-1-badge">—</span></div>
+        <div class="mseat-state" id="seat-1-state">等待出牌 · Ready</div>
+      </div>
+    </div>
+    <div class="mseat" id="seat-robot-2">
+      <div class="mseat-fig" id="seat-fig-2" aria-hidden="true"></div>
+      <div class="mseat-info">
+        <div class="mseat-name"><span id="seat-name-2">对手</span> <span class="mseat-badge" id="seat-2-badge">—</span></div>
+        <div class="mseat-state" id="seat-2-state">等待出牌 · Ready</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Turn bar: the round flow action -->
+  <div class="turn-bar">
+    <div class="turn-status" id="turn-status">选好买方与标的，然后点「打出交易」。</div>
+    <span class="play-state-chip wait" id="play-state-chip">待选择</span>
+    <button class="play-deal-btn" id="play-deal-btn" type="button" disabled>打出交易 · Play Deal</button>
+    <button class="next-round-btn" id="next-round-btn" type="button" style="display:none;">下一回合 · Next Round →</button>
+    <!-- Deterministic turn feedback: you play, then each opponent responds in order. -->
+    <div class="turn-feedback" id="turn-feedback" style="display:none;" aria-live="polite"></div>
+  </div>
+
+  <div class="match-main">
+    <div class="stage-col">
+      <div class="felt-stage">
+        <div class="felt">
+          <div class="felt-label" id="felt-label">Deal Table</div>
+          <div class="deal-zone" id="deal-zone">
+            <div class="pslot acq" id="slot-acq" data-role="acq" aria-label="买方槽位">
+              <div class="pslot-role">买方 / Acquirer</div>
+              <div class="pslot-body" id="slot-acq-body"></div>
+            </div>
+            <div class="zone-center">
+              <span class="zone-arrow">→</span>
+              <button class="preverse" id="reverse-btn" type="button" title="反转方向（买方↔标的）" disabled>⇄</button>
+              <button class="pclear" id="clear-deal-btn" type="button" title="清空当前交易" disabled>清空交易 · Clear Deal</button>
+              <div class="draw-pile">
+                <div class="pile-stack" id="draw-pile" title="抽一张 / 换一批手牌" role="button" tabindex="0" aria-label="抽牌">
+                  <div class="pile-card"></div><div class="pile-card"></div><div class="pile-card"></div>
+                </div>
+                <div class="pile-label">Company Deck</div>
+              </div>
+            </div>
+            <div class="pslot tgt" id="slot-tgt" data-role="tgt" aria-label="标的槽位">
+              <div class="pslot-role">标的 / Target</div>
+              <div class="pslot-body" id="slot-tgt-body"></div>
+            </div>
+          </div>
+
+          <!-- V5.10.1 The Showdown: after the player and both bankers have played,
+               the deal table re-stages the SAME round-result deal records as a
+               three-way Showdown (你 / Banker 1 / Banker 2). Presentation only —
+               it shows the existing deal / MP / EPS / viability and the existing
+               round winner; it changes NO game rule, Match Points, or engine truth.
+               Built/revealed by arena_match.js (safe DOM); hidden during play. -->
+          <div class="showdown-stage" id="showdown-stage" style="display:none;" aria-live="polite">
+            <div class="showdown-eyebrow" id="showdown-eyebrow">本回合摊牌 · Showdown</div>
+            <div class="showdown-grid" id="showdown-grid"></div>
+            <div class="showdown-verdict" id="showdown-verdict"></div>
+            <div class="showdown-foot">三方依据本回合已出交易摊牌 · Match Points 仅本局计分，不进入双榜 / EPS</div>
+          </div>
+
+          <div class="felt-hint" id="deal-hint">把一张手牌拖到另一张牌或标的槽位上：A 拖到 B 表示「A 收购 B」。也可以点击选牌、用 ⇄ 反转方向。</div>
+        </div>
+      </div>
+
+      <div class="hand-rail">
+        <div class="hand-rail-head">
+          <div class="hand-rail-title">玩家手牌 · Player Hand <span>（拖到桌上出牌）</span></div>
+          <div class="hand-controls">
+            <button class="pbtn" id="hand-draw" type="button">抽一张 · Draw</button>
+            <button class="pbtn" id="hand-rotate" type="button">换一批 · Reshuffle</button>
+          </div>
+        </div>
+        <div class="hand-fan" id="hand-fan"></div>
+      </div>
+    </div>
+
+    <aside class="dock">
+      <!-- Light result card (reused render ids) -->
+      <div class="dock-card" id="result-card">
+        <div class="dock-title"><span>当前交易 · 战报</span><span class="dock-dot"></span></div>
+        <div class="result-empty" id="result-empty">把买方牌拖到标的牌上，这里会出现轻结果战报。</div>
+        <div id="result-body" style="display:none;">
+          <div class="rc-head">
+            <div class="rc-deal"><span class="rc-acq" id="rc-acq">—</span><span class="rc-arrow">→</span><span class="rc-tgt" id="rc-tgt">—</span></div>
+            <div class="rc-eps"><div class="rc-eps-val" id="rc-eps-val">—</div><div class="rc-eps-label" id="rc-eps-label">EPS 较买方独立口径</div></div>
+          </div>
+          <div class="rc-mp"><span class="rc-mp-badge" id="rc-mp-badge">+0</span><span class="rc-mp-label">本笔 Match Points · 仅本局计分</span></div>
+          <div class="rc-axis">
+            <div class="rc-axis-label">经济性 / Economic</div>
+            <div class="rc-chips" id="rc-chips"></div>
+          </div>
+          <div class="rc-axis rc-axis-via">
+            <div class="rc-axis-label">现实可行性 / Viability <span class="rc-axis-note">规则推演，非法律意见</span></div>
+            <div class="rc-viability-chips" id="rc-viability-chips"></div>
+          </div>
+          <div class="rc-foot">
+            <button class="rc-queue-btn" id="rc-queue-btn" type="button">加入候选 · Add to Queue</button>
+            <button class="rc-ticket-btn" id="rc-ticket-btn" type="button">查看推演票据 · Deal Ticket</button>
+            <!-- V5.10.4.x: Deal Studio jump link removed from Match Play — leaving
+                 the page would reset the live match. In-match Deal Ticket modal stays. -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Round result compact panel -->
+      <div class="dock-card round-result" id="round-result">
+        <div class="dock-title"><span>本回合结果 · Round Result</span><span class="dock-dot"></span></div>
+        <div class="mr-winner" id="mr-winner"></div>
+        <div class="mr-list" id="mr-list"></div>
+      </div>
+
+      <!-- Deal Review Queue (shared light shortlist) -->
+      <div class="dock-card" id="queue-card">
+        <div class="dock-title"><span>候选队列 · Deal Review Queue <span class="queue-badge" id="queue-count-badge">0</span></span></div>
+        <div class="queue-list" id="queue-list"></div>
+        <div class="queue-empty" id="queue-empty">还没有候选。点「加入候选」把交易存入本局清单。</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- V5.9.4.1 round-transition retain panel as a floating elevated panel (keep up
+     to 4 cards; the rest refresh next round). Shown over a light scrim before the
+     player confirms — it does NOT change the table / hand / dock / scoreboard
+     layout, and it changes no retain/refresh rule. -->
+<div id="retain-overlay" class="retain-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="retain-title">
+  <div class="retain-panel" id="retain-panel">
+    <div class="retain-hd">
+      <div class="retain-hd-main">
+        <span class="retain-eyebrow">回合结束 · Round Transition</span>
+        <span class="retain-title" id="retain-title">选择保留到下一回合的手牌（最多 4 张）</span>
+      </div>
+      <span class="retain-count" id="retain-count">已保留 0 / 4</span>
+      <button class="retain-close" id="retain-close" type="button" aria-label="关闭，返回本回合结果">✕</button>
+    </div>
+    <div class="retain-body">
+      <div class="retain-note">选择最多 4 张带入下一回合；<b>未保留的手牌会在下一回合被刷新</b>。若一张都不选，下一回合手牌将<b>全部换成新牌</b>。已打出的公司不会回到手牌，下一轮自动补满至 7 张。</div>
+      <div class="retain-list-label">可保留的手牌 · 含卡牌等级 / Tier</div>
+      <div class="retain-list" id="retain-list"></div>
+    </div>
+    <div class="retain-ft">
+      <span class="retain-ft-hint">先看本回合结果与排行，决定好再保留；随时可关闭返回。</span>
+      <div class="retain-actions">
+        <button class="retain-cancel-btn" id="retain-cancel-btn" type="button">稍后再看 · Back</button>
+        <button class="retain-confirm-btn" id="retain-confirm-btn" type="button">保留并进入下一回合 · Keep &amp; Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deal Ticket overlay (reuses the V5.4 mid-density ticket; same ids/render). -->
+<div id="ticket-overlay" class="ticket-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
+  <div class="ticket-panel">
+    <div class="ticket-head">
+      <div class="ticket-title" id="ticket-title">Deal Ticket</div>
+      <button class="ticket-close" id="ticket-close" type="button" aria-label="关闭">✕</button>
+    </div>
+    <div class="ticket-scroll">
+      <div class="ticket-loading" id="ticket-loading">正在计算推演票据…</div>
+      <div class="ticket-error" id="ticket-error" style="display:none;"></div>
+      <div id="ticket-body" style="display:none;">
+        <section class="tk-sec">
+          <div class="tk-sec-title">交易摘要 / Summary</div>
+          <div class="tk-summary">
+            <div><div class="tk-eps-val" id="tk-eps-val">—</div><div class="tk-eps-label">EPS 增厚/摊薄（较买方独立口径）</div></div>
+            <div class="tk-chips" id="tk-summary-chips"></div>
+          </div>
+        </section>
+        <section class="tk-sec">
+          <div class="tk-sec-title">经济性拆解 / Economic</div>
+          <div class="tk-grid" id="tk-econ-grid"></div>
+        </section>
+        <section class="tk-sec">
+          <div class="tk-sec-title">现实可行性 / Viability <span class="tk-sec-note">规则推演，非法律意见；不进入 EPS</span></div>
+          <div>
+            <span class="via-level" id="tk-via-level">—</span>
+            <div class="tk-via-summary" id="tk-via-summary"></div>
+            <div class="tk-via-flags" id="tk-via-flags"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div class="ticket-foot">
+      <div class="ticket-foot-note">中密度推演票据 · 经济性与现实可行性两轴并列展示，不合并为单一总分。</div>
+      <div class="ticket-foot-actions">
+        <button class="tk-queue-btn" id="tk-queue-btn" type="button">加入候选 · Add to Queue</button>
+        <!-- V5.10.4.x: Deal Studio jump link removed from Match Play Deal Ticket —
+             stay in the live match; in-match review only this round. -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- End screen / settlement -->
+<div id="end-screen" class="end-screen" style="display:none;" role="dialog" aria-modal="true" aria-label="对局结算">
+  <div class="end-panel">
+    <div class="end-calc" id="end-calc">正在结算交易表现<span class="dots"></span></div>
+    <div id="end-content" style="display:none;">
+      <!-- 1) Verdict header / winner reveal — the committee's final judgement. -->
+      <div class="reveal verdict" id="reveal-verdict">
+        <div class="verdict-eyebrow">投资委员会终审 · Committee Verdict</div>
+        <div class="verdict-stage" id="verdict-stage">
+          <div class="verdict-sigil" id="verdict-sigil" aria-hidden="true"></div>
+          <div class="end-winner" id="end-winner"></div>
+          <div class="verdict-score" id="verdict-score"></div>
+          <div class="verdict-line" id="verdict-line"></div>
+        </div>
+      </div>
+
+      <!-- 2) Five-round trajectory — the path to the verdict, not a table. -->
+      <div class="reveal" id="reveal-trajectory">
+        <div class="end-section-label">五回合轨迹 · Match Trajectory</div>
+        <div class="end-trajectory" id="end-trajectory"></div>
+      </div>
+
+      <!-- 3) Best deals — each participant's strongest deal of the match. -->
+      <div class="reveal" id="reveal-best">
+        <div class="end-section-label">本场最佳交易 · Best Deals</div>
+        <div class="end-best-deals" id="end-best-deals"></div>
+      </div>
+
+      <!-- 4) Final scores (Match Points totals) + detailed review (collapsible). -->
+      <div class="reveal" id="reveal-totals">
+        <div class="end-section-label">最终比分 · Final Match Points</div>
+        <div class="end-totals" id="end-totals"></div>
+      </div>
+      <div class="reveal" id="reveal-review">
+        <details class="end-review-details" id="end-review-details">
+          <summary class="end-review-summary">展开完整复盘 · Detailed Review（15 笔已出交易）</summary>
+          <div class="end-review-inner">
+            <div class="end-review-title">回合明细 · Round Detail</div>
+            <div class="end-rounds" id="end-rounds"></div>
+            <div class="end-review-title">交易复盘 · Compact Review（每位玩家 5 笔，小卡片展示）</div>
+            <div class="end-review" id="end-review"></div>
+          </div>
+        </details>
+      </div>
+      <div class="reveal in" id="reveal-actions">
+        <div class="end-actions">
+          <button class="end-btn primary" id="end-play-again" type="button">再来一局 · Play Again</button>
+          <button class="end-btn queue" id="end-add-best" type="button">把最佳交易加入候选 · Add Best Deals</button>
+          <a class="end-btn ghost" href="/modeling/ma/arena">返回备战区 · War Room</a>
+        </div>
+        <div class="end-note">Match Points 只用于本局胜负，不是投资评级，不进入经济性 / 现实可行性双榜，也不进入 EPS / calculate。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/modeling/js/card_localization.js"></script>
+<script src="/static/modeling/js/deal_queue.js"></script>
+<script src="/static/modeling/js/robot_opponent.js"></script>
+<script src="/static/modeling/js/match_engine.js"></script>
+<script src="/static/modeling/js/opponent_identity.js"></script>
+<script src="/static/modeling/js/arena_match.js"></script>
+</body>
+</html>

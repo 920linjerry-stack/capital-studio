@@ -1,0 +1,58 @@
+# ---- Editor / agent ----
+.claude/
+.tmp-edge-*/
+
+# ---- Python caches ----
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+pytest-cache-files-*/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+
+# ---- Secrets / environment ----
+.env
+*.env
+
+# ---- Logs ----
+*.log
+
+# ---- Generated Excel export artifacts ----
+*.xlsx
+*.xlsm
+
+# ---- Temp / dev artifacts ----
+tmp/
+dev_artifacts/
+
+# ---- Internal engineering notes & design exploration (not shipped) ----
+# docs/ holds internal devlogs, QA harnesses, candidate packs and drafts;
+# art_direction/ is internal visual exploration. Neither is a runtime
+# dependency. The public narrative lives in README.md. Curate individual
+# files out of these dirs later if any becomes worth shipping.
+docs/
+static/modeling/art_direction/
+
+# ---- Personal / local state (do NOT publish) ----
+portfolio.json
+
+# ---- Runtime state & API cache (generated, NOT seed data) ----
+data/cache/
+data/thesis/
+data/dcf_scenarios/
+
+# ---- Legacy snapshots ----
+*.json.tmp
+baseline_snapshot.json
+post_fix_snapshot.json
+aapl_base.json
+600519_base.json
+hk0700_base.json
+
+# ---- Seed data: keep tracked (must ship with the repo) ----
+!data/ontology/
+!data/ontology/drivers.json

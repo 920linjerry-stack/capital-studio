@@ -1,0 +1,291 @@
+{
+  "pricing_power": {
+    "display_name": "Pricing Power",
+    "display_name_zh": "定价权",
+    "framework": "Consumer",
+    "description": "Ability to raise prices without materially damaging unit demand.",
+    "description_zh": "能涨价而销量不掉,反映品牌或市场地位。",
+      "interpretation_zh": "企业能把品牌溢价或成本压力传导给客户，通常支撑收入增长和利润率韧性。",
+    "affects": [
+      "revenue_growth",
+      "margin"
+    ]
+  },
+  "premiumization": {
+    "display_name": "Premiumization",
+    "display_name_zh": "高端化",
+    "framework": "Consumer",
+    "description": "Mix shift toward higher-ASP products within the same category.",
+    "description_zh": "同品类内产品结构向高单价档位上移。",
+      "interpretation_zh": "产品结构向更高单价或更高端档位上移，通常带来收入质量和利润率改善。",
+    "affects": [
+      "revenue_growth",
+      "margin"
+    ]
+  },
+  "consumer_recovery": {
+    "display_name": "Consumer Recovery",
+    "display_name_zh": "消费复苏",
+    "framework": "Consumer",
+    "description": "Cyclical rebound in discretionary spending post-downturn.",
+    "description_zh": "可选消费从底部回暖,需求随周期反弹。",
+      "interpretation_zh": "可选消费需求从低位回暖，通常带来收入修复，但持续性取决于消费周期。",
+    "affects": [
+      "revenue_growth"
+    ]
+  },
+  "brand_moat": {
+    "display_name": "Brand Moat",
+    "display_name_zh": "品牌护城河",
+    "framework": "Consumer",
+    "description": "Durable preference / pricing premium driven by brand equity.",
+    "description_zh": "品牌带来的长期偏好与溢价能力。",
+      "interpretation_zh": "品牌形成长期偏好和溢价能力，通常支撑利润率稳定和长期确定性。",
+    "affects": [
+      "margin",
+      "terminal_confidence"
+    ]
+  },
+  "channel_expansion": {
+    "display_name": "Channel Expansion",
+    "display_name_zh": "渠道扩张",
+    "framework": "Consumer",
+    "description": "Growth driven by expansion of distribution / retail / overseas channels.",
+    "description_zh": "靠新开门店、下沉或出海驱动收入增长。",
+      "interpretation_zh": "通过新门店、新区域或新渠道触达更多客户，通常带来收入增长，也可能伴随前期投入。",
+    "affects": [
+      "revenue_growth",
+      "capex"
+    ]
+  },
+  "nrr": {
+    "display_name": "Net Revenue Retention",
+    "display_name_zh": "净收入留存",
+    "framework": "SaaS",
+    "description": "Existing customer base revenue growth net of churn and contraction.",
+    "description_zh": "老客户净增长,扣除流失与降级后的留存。",
+      "interpretation_zh": "老客户收入在扣除流失后仍能扩张，通常反映客户黏性和单客户价值提升。",
+    "affects": [
+      "revenue_growth"
+    ]
+  },
+  "cac_payback": {
+    "display_name": "CAC Payback",
+    "display_name_zh": "获客回收周期",
+    "framework": "SaaS",
+    "description": "Months to recover customer acquisition cost via gross profit.",
+    "description_zh": "毛利收回获客成本所需的月数。",
+      "interpretation_zh": "获客成本能较快通过毛利收回，通常代表销售效率较高、增长质量更好。",
+    "affects": [
+      "margin"
+    ]
+  },
+  "gross_churn": {
+    "display_name": "Gross Churn",
+    "display_name_zh": "收入流失率",
+    "framework": "SaaS",
+    "description": "Revenue lost from departing customers, before expansion.",
+    "description_zh": "未计扩张前,流失客户带走的收入比例。",
+      "interpretation_zh": "未计扩张前的收入流失越高，通常会削弱收入增长的可持续性。",
+    "affects": [
+      "revenue_growth"
+    ]
+  },
+  "fab_utilization": {
+    "display_name": "Fab Utilization",
+    "display_name_zh": "产能利用率",
+    "framework": "Semis",
+    "description": "Capacity utilization driving incremental margin leverage.",
+    "description_zh": "产能利用率提升带来的边际利润放大。",
+      "interpretation_zh": "产能利用率变化会放大利润率波动，通常是半导体周期盈利弹性的关键来源。",
+    "affects": [
+      "margin"
+    ]
+  },
+  "ai_demand": {
+    "display_name": "AI Demand",
+    "display_name_zh": "AI 算力需求",
+    "framework": "Semis",
+    "description": "Datacenter / accelerator demand cycle driving unit and ASP growth.",
+    "description_zh": "数据中心与加速卡需求拉动出货量与单价。",
+      "interpretation_zh": "数据中心和加速卡需求扩张，通常带来出货量、单价和利润率弹性。",
+    "affects": [
+      "revenue_growth",
+      "margin"
+    ]
+  },
+  "capex_cycle": {
+    "display_name": "CapEx Cycle",
+    "display_name_zh": "资本开支周期",
+    "framework": "Semis",
+    "description": "Industry capacity investment phase; affects future supply / pricing.",
+    "description_zh": "行业产能投资节奏,影响未来供给与价格。",
+      "interpretation_zh": "行业资本开支节奏影响未来供给和价格，通常决定产能周期的位置。",
+    "affects": [
+      "capex"
+    ]
+  },
+  "node_transition": {
+    "display_name": "Node Transition",
+    "display_name_zh": "制程升级",
+    "framework": "Semis",
+    "description": "Process node migration affecting ASP, yield, and competitive position.",
+    "description_zh": "制程节点切换,影响单价、良率与竞争位次。",
+      "interpretation_zh": "制程升级会影响良率、单价和竞争位置，通常伴随更高投入和利润弹性。",
+    "affects": [
+      "margin",
+      "capex"
+    ]
+  },
+  "ecosystem_lockin": {
+    "display_name": "Ecosystem Lock-in",
+    "display_name_zh": "生态锁定",
+    "framework": "Platform",
+    "description": "Switching cost from integrated services / data / hardware ties.",
+    "description_zh": "服务、数据、硬件联动形成的迁移成本。",
+      "interpretation_zh": "服务、数据或硬件形成迁移成本，通常降低流失并增强长期定价能力。",
+    "affects": [
+      "margin",
+      "terminal_confidence"
+    ]
+  },
+  "network_effects": {
+    "display_name": "Network Effects",
+    "display_name_zh": "网络效应",
+    "framework": "Platform",
+    "description": "User value scales with participant count; reinforces market position.",
+    "description_zh": "用户越多价值越大,自我强化市场地位。",
+      "interpretation_zh": "用户或商家规模越大，平台价值越强，通常提高留存和长期增长质量。",
+    "affects": [
+      "revenue_growth",
+      "terminal_confidence"
+    ]
+  },
+  "take_rate": {
+    "display_name": "Take Rate",
+    "display_name_zh": "平台抽成率",
+    "framework": "Platform",
+    "description": "Platform fee as % of GMV; pricing power within the marketplace.",
+    "description_zh": "平台从 GMV 中抽取的比例,反映平台议价力。",
+      "interpretation_zh": "平台抽成率反映交易中的议价能力，通常影响收入增长和利润率。",
+    "affects": [
+      "revenue_growth",
+      "margin"
+    ]
+  },
+  "services_mix_shift": {
+    "display_name": "Services Mix Shift",
+    "display_name_zh": "服务收入占比提升",
+    "framework": "Platform",
+    "description": "Revenue mix shifting toward higher-margin recurring service income.",
+    "description_zh": "收入结构向高毛利、可重复的服务类业务倾斜。",
+      "interpretation_zh": "收入向高毛利、可重复的服务业务倾斜，通常改善利润率和现金流质量。",
+    "affects": [
+      "margin",
+      "terminal_confidence"
+    ]
+  },
+  "operating_leverage": {
+    "display_name": "Operating Leverage",
+    "display_name_zh": "经营杠杆",
+    "framework": "Margin",
+    "description": "Fixed-cost base producing margin expansion as revenue scales.",
+    "description_zh": "固定成本占比高,收入放大时利润弹性更大。",
+      "interpretation_zh": "固定成本占比较高时，收入增长会放大利润弹性，下行阶段也会放大压力。",
+    "affects": [
+      "margin"
+    ]
+  },
+  "margin_recovery": {
+    "display_name": "Margin Recovery",
+    "display_name_zh": "利润率修复",
+    "framework": "Margin",
+    "description": "Reversion from cyclically depressed margins toward mid-cycle.",
+    "description_zh": "周期性低位利润率向中枢回归。",
+      "interpretation_zh": "低位利润率向正常水平回归，通常反映成本、价格或需求环境修复。",
+    "affects": [
+      "margin"
+    ]
+  },
+  "input_cost_relief": {
+    "display_name": "Input Cost Relief",
+    "display_name_zh": "原材料成本下行",
+    "framework": "Margin",
+    "description": "Falling commodity / component costs improving gross margin.",
+    "description_zh": "上游原料或元器件降价,推动毛利改善。",
+      "interpretation_zh": "原材料或元器件成本下降，通常改善毛利率，但持续性取决于成本周期。",
+    "affects": [
+      "margin"
+    ]
+  },
+  "capacity_expansion": {
+    "display_name": "Capacity Expansion",
+    "display_name_zh": "产能扩张",
+    "framework": "Industrial",
+    "description": "New plants / lines coming online; volume growth from physical capacity.",
+    "description_zh": "新工厂或产线投产,带来量的增长。",
+      "interpretation_zh": "新产能投放通常支持销量增长，但也会带来资本开支和利用率考验。",
+    "affects": [
+      "revenue_growth",
+      "capex"
+    ]
+  },
+  "asset_turnover": {
+    "display_name": "Asset Turnover",
+    "display_name_zh": "资产周转效率",
+    "framework": "Industrial",
+    "description": "Revenue generated per unit of invested asset; capital efficiency.",
+    "description_zh": "单位资产产生的收入,衡量资本使用效率。",
+      "interpretation_zh": "单位资产产生更多收入，通常代表资本使用效率更高、增长消耗更低。",
+    "affects": [
+      "revenue_growth",
+      "capex"
+    ]
+  },
+  "inventory_cycle": {
+    "display_name": "Inventory Cycle",
+    "display_name_zh": "库存周期",
+    "framework": "Industrial",
+    "description": "Inventory normalization / destocking / restocking cycle affecting near-term demand and margins.",
+    "description_zh": "去库存与补库存的节奏,影响近期需求与利润。",
+      "interpretation_zh": "去库存或补库存会影响短期收入、现金转换和利润率，关键在周期位置。",
+    "affects": [
+      "revenue_growth",
+      "working_capital"
+    ]
+  },
+  "market_share_gain": {
+    "display_name": "Market Share Gain",
+    "display_name_zh": "市场份额提升",
+    "framework": "Competitive",
+    "description": "Share capture from competitors within an existing market.",
+    "description_zh": "在存量市场里从对手手里夺取份额。",
+      "interpretation_zh": "在存量市场中获得更多份额，通常反映产品力、渠道力或成本优势。",
+    "affects": [
+      "revenue_growth"
+    ]
+  },
+  "tam_expansion": {
+    "display_name": "TAM Expansion",
+    "display_name_zh": "市场空间扩张",
+    "framework": "Competitive",
+    "description": "Addressable market growth from new geographies / use cases / adjacencies.",
+    "description_zh": "通过新地域、新场景或相邻市场打开天花板。",
+      "interpretation_zh": "新地域、新场景或相邻市场打开天花板，通常提高长期收入增长空间。",
+    "affects": [
+      "revenue_growth"
+    ]
+  },
+  "regulatory_headwind": {
+    "display_name": "Regulatory Headwind",
+    "display_name_zh": "监管压力",
+    "framework": "External",
+    "description": "Policy / regulation shift compressing industry economics.",
+    "description_zh": "政策或监管收紧,压缩行业经济性。",
+      "interpretation_zh": "政策或监管变化可能压缩行业经济性，并提高风险溢价。",
+    "affects": [
+      "margin",
+      "risk_discount"
+    ]
+  }
+}

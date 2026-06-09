@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个股详情</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* DCF 入口卡片 */
+    .dcf-cta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .dcf-cta-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .dcf-cta-text strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 2px;
+      font-size: 14px;
+    }
+    .btn-dcf {
+      background-color: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: "Consolas", monospace;
+      white-space: nowrap;
+      transition: background-color 0.2s;
+      text-decoration: none;
+    }
+    .btn-dcf:hover { background-color: rgba(56,139,253,0.1); }
+    .detail-topbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+    .detail-back-link {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      background: transparent;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-family: "Consolas", monospace;
+      text-decoration: none;
+      transition: background-color 0.18s, border-color 0.18s;
+    }
+    .detail-back-link:hover {
+      background: rgba(56,139,253,0.1);
+    }
+    .chart-container {
+      min-height: 320px;
+      transition: opacity 0.16s ease;
+    }
+    .chart-container.is-loading {
+      opacity: 0.55;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">▸ STOCK DETAIL</div>
+    <div class="subtitle">个股详情</div>
+  </div>
+</header>
+
+<main class="container">
+
+  <div id="loading" class="loading">正在加载行情数据…</div>
+
+  <div id="detail-content" style="display:none;">
+    <div class="detail-topbar">
+      <a class="detail-back-link" href="/">← 返回持仓列表</a>
+    </div>
+
+    <div class="card">
+      <div class="detail-header">
+        <span class="detail-symbol" id="d-symbol">--</span>
+        <span class="detail-name"   id="d-name">--</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:16px;">
+        <span class="detail-price mono" id="d-price">--</span>
+        <span class="detail-change mono" id="d-change">--</span>
+        <span style="font-size:12px;color:var(--text-muted);" id="d-currency"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">关键指标</div>
+      <div class="key-stats">
+        <div class="stat-item"><div class="stat-label">市盈率 (TTM)</div><div class="stat-value" id="d-pe">--</div></div>
+        <div class="stat-item"><div class="stat-label">市净率</div><div class="stat-value" id="d-pb">--</div></div>
+        <div class="stat-item"><div class="stat-label">总市值</div><div class="stat-value" id="d-mktcap">--</div></div>
+        <div class="stat-item"><div class="stat-label">52周最高</div><div class="stat-value up" id="d-52h">--</div></div>
+        <div class="stat-item"><div class="stat-label">52周最低</div><div class="stat-value down" id="d-52l">--</div></div>
+        <div class="stat-item"><div class="stat-label">我的买入价</div><div class="stat-value" id="d-cost" style="color:var(--gold);">--</div></div>
+        <div class="stat-item"><div class="stat-label">我的盈亏</div><div class="stat-value" id="d-pnl">--</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>价格走势</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-secondary period-btn active-period" data-period="3mo">3月</button>
+          <button class="btn btn-secondary period-btn" data-period="6mo">6月</button>
+          <button class="btn btn-secondary period-btn" data-period="1y">1年</button>
+          <button class="btn btn-secondary period-btn" data-period="ytd">YTD</button>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="price-chart"></canvas></div>
+    </div>
+
+    <!-- ★ 新增：DCF 估值工具入口卡片 -->
+    <div class="card">
+      <div class="dcf-cta">
+        <div class="dcf-cta-text">
+          <strong>📊 想看这只股票的内在价值？</strong>
+          进入 DCF 估值工具，系统自动拉取财报数据，生成完整折现现金流模型，支持导出专业 Excel 模型。
+        </div>
+        <a id="dcf-link" href="/modeling" class="btn-dcf">进入 DCF 估值工具 →</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<style>
+  .active-period { background-color: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+</style>
+
+<script src="/static/js/detail.js"></script>
+
+<script>
+  // 等 detail.js 加载完后，把 DCF 链接的 symbol 填好
+  document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const sym    = params.get("symbol");
+    if (sym) {
+      const link = document.getElementById("dcf-link");
+      link.href = `/modeling/dcf/select?symbol=${sym.toUpperCase()}`;
+      link.textContent = `进入 ${sym.toUpperCase()} 的 DCF 估值 →`;
+    }
+  });
+</script>
+</body>
+</html>

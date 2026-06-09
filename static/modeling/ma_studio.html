@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Studio — A&D Engine</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .ma-layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .ma-inputs { position: sticky; top: 0; }
+    .deal-parties {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+      margin-bottom: 4px;
+    }
+    .party-card {
+      position: relative;
+      text-align: left;
+      min-width: 0;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 13px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.08s;
+    }
+    .party-card:hover { box-shadow: 0 0 0 1px rgba(56,139,253,0.25); }
+    .party-card:active { transform: translateY(1px); }
+    .party-card.acq { border-top-color: var(--accent); }
+    .party-card.acq:hover { border-color: var(--accent); }
+    .party-card.tgt { border-top-color: #d29922; }
+    .party-card.tgt:hover { border-color: #d29922; box-shadow: 0 0 0 1px rgba(210,153,34,0.25); }
+    .party-role {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+    .party-card.acq .party-role { color: var(--accent); }
+    .party-card.tgt .party-role { color: #d29922; }
+    .party-ticker {
+      margin-top: 7px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .party-name {
+      margin-top: 1px;
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .party-sub, .party-meta {
+      margin-top: 5px;
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .party-hint {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-muted);
+      opacity: 0.8;
+    }
+    .reverse-btn {
+      align-self: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      color: var(--accent);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, transform 0.2s;
+    }
+    .reverse-btn:hover { border-color: var(--accent); transform: rotate(180deg); }
+    .cs-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 12vh 16px 16px;
+    }
+    .cs-card {
+      position: relative;
+      width: min(620px, 96vw);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 18px 12px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+    .cs-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .cs-title { font-size: 15px; font-weight: 700; }
+    .cs-title span { color: var(--accent); }
+    .cs-sub { font-size: 11px; color: var(--text-muted); margin: 3px 0 12px; }
+    .cs-search {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 9px 11px;
+      outline: none;
+    }
+    .cs-search:focus { border-color: var(--accent); }
+    .cs-results { margin-top: 10px; max-height: 46vh; overflow-y: auto; }
+    .cs-row {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: baseline;
+      padding: 9px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .cs-row:hover { background: var(--bg-tertiary); border-color: var(--border); }
+    .cs-row-ticker {
+      font-family: Consolas, monospace;
+      font-weight: 800;
+      font-size: 12px;
+      color: var(--accent);
+    }
+    .cs-row-name {
+      min-width: 0;
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cs-row-sub, .cs-row-tags {
+      min-width: 0;
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cs-row-tags { grid-column: 2 / 4; padding-left: 0; }
+    .cs-empty { padding: 16px 10px; color: var(--text-muted); font-size: 12px; text-align: center; }
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .field-row:last-child { border-bottom: 0; }
+    .field-label { color: var(--text-muted); font-size: 12px; }
+    .ma-input {
+      width: 110px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #4d94ff;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      text-align: right;
+      padding: 5px 7px;
+      outline: none;
+    }
+    .ma-input:focus { border-color: var(--accent); }
+    .section-kicker {
+      margin-top: 14px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .field-hint { color: var(--text-muted); font-size: 11px; line-height: 1.5; margin: 4px 0 8px; }
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      flex-wrap: wrap;
+    }
+    .seg button {
+      background: var(--bg-tertiary);
+      border: 0;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .seg button.active { background: rgba(56,139,253,0.18); color: var(--accent); font-weight: 700; }
+    .synergy-box {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      padding: 10px 11px;
+      margin-top: 8px;
+    }
+    .synergy-value { font-family: Consolas, monospace; font-size: 14px; font-weight: 800; color: var(--accent); }
+    .synergy-detail { margin-top: 4px; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
+    .headline-card { text-align: center; padding: 22px; }
+    .headline-verdict { font-size: 30px; font-weight: 800; font-family: Consolas, monospace; }
+    .headline-verdict.accretive { color: var(--green); }
+    .headline-verdict.dilutive { color: var(--red); }
+    .headline-pct { margin-top: 4px; font-size: 16px; color: var(--text-muted); font-family: Consolas, monospace; }
+    .chip-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      cursor: default;
+    }
+    .chip.synergy-self { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .chip.synergy-supported { color: var(--accent); border-color: rgba(56,139,253,0.5); background: rgba(56,139,253,0.10); }
+    .chip.synergy-short { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .chip.pre-ppa { cursor: help; }
+    .chip-tip {
+      max-width: 460px;
+      margin: 10px auto 0;
+      display: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.55;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+    }
+    .chip-tip.show { display: block; }
+    .econ-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .econ-cell {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 11px 12px;
+    }
+    .econ-label { color: var(--text-muted); font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .econ-value { margin-top: 5px; font-family: Consolas, monospace; font-size: 17px; font-weight: 700; }
+    .econ-sub { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+    .viability-card { border-style: dashed; }
+    .viability-card .card-title { color: var(--text-muted); }
+    .placeholder-note { color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+    .via-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .via-level {
+      font-size: 13px; font-weight: 700;
+      padding: 4px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-muted);
+    }
+    .via-level.green { color: var(--green); border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.10); }
+    .via-level.yellow { color: #d29922; border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.10); }
+    .via-level.red { color: var(--red); border-color: rgba(248,81,73,0.5); background: rgba(248,81,73,0.10); }
+    .via-summary { font-size: 12px; color: var(--text-primary); }
+    .via-flags { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .via-flag {
+      border: 1px solid var(--border); border-left: 3px solid var(--border);
+      border-radius: 6px; background: var(--bg-tertiary); padding: 9px 12px;
+    }
+    .via-flag.green { border-left-color: var(--green); }
+    .via-flag.yellow { border-left-color: #d29922; }
+    .via-flag.red { border-left-color: var(--red); }
+    .via-flag-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .via-flag-title .via-cat { font-weight: 400; color: var(--text-muted); font-size: 10px; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .via-flag-msg { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+    .via-flag-meta { font-size: 10px; color: var(--text-muted); margin-top: 5px; font-family: Consolas, monospace; opacity: 0.85; }
+    .error-panel {
+      display: none;
+      border: 1px solid var(--red);
+      background: rgba(248,81,73,0.08);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .run-row { margin-top: 16px; }
+    .run-row .btn { width: 100%; padding: 9px; }
+    @media (max-width: 900px) {
+      .ma-layout { grid-template-columns: 1fr; }
+      .ma-inputs { position: static; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">DEAL STUDIO</div>
+    <div class="subtitle">V5.1 Company Cards · 默认成本协同 · 简化 Pre-PPA EPS 增厚/摊薄</div>
+  </div>
+  <div class="header-right">
+    <details class="modeling-menu">
+      <summary>建模工具 ▼</summary>
+      <div class="modeling-menu-list">
+        <a href="/modeling/dcf">DCF 估值模型</a>
+        <a href="/modeling/lbo">LBO 收购模型</a>
+      </div>
+    </details>
+    <a href="/modeling/ma/arena" style="color:var(--accent);font-size:12px;text-decoration:none;">Deal Arena</a>
+    <a href="/" style="color:var(--accent);font-size:12px;text-decoration:none;">持仓面板</a>
+  </div>
+</header>
+
+<main class="container" style="padding-top:20px;">
+  <div class="ma-layout">
+    <aside class="ma-inputs">
+      <div class="card">
+        <div class="card-title">交易设置</div>
+        <div class="deal-parties">
+          <button class="party-card acq" id="acq-card" type="button" title="搜索并选择买方">
+            <div class="party-role">买方 / Acquirer</div>
+            <div class="party-ticker" id="acq-ticker">-</div>
+            <div class="party-name" id="acq-name">选择买方</div>
+            <div class="party-sub" id="acq-sub"></div>
+            <div class="party-meta" id="acq-meta"></div>
+            <div class="party-hint">点击搜索 ▼</div>
+          </button>
+          <button class="reverse-btn" id="reverse-btn" type="button" title="反转方向（买方↔标的）">⇄</button>
+          <button class="party-card tgt" id="tgt-card" type="button" title="搜索并选择标的">
+            <div class="party-role">标的 / Target</div>
+            <div class="party-ticker" id="tgt-ticker">-</div>
+            <div class="party-name" id="tgt-name">选择标的</div>
+            <div class="party-sub" id="tgt-sub"></div>
+            <div class="party-meta" id="tgt-meta"></div>
+            <div class="party-hint">点击搜索 ▼</div>
+          </button>
+        </div>
+
+        <div class="section-kicker">买方财务 <span style="text-transform:none;font-weight:400;">(USD mm)</span></div>
+        <div class="field-row"><span class="field-label">净利润</span><input class="ma-input" id="acq-ni" type="number" /></div>
+        <div class="field-row"><span class="field-label">股数（百万股）</span><input class="ma-input" id="acq-sh" type="number" /></div>
+        <div class="field-row"><span class="field-label">股价</span><input class="ma-input" id="acq-px" type="number" /></div>
+
+        <div class="section-kicker">标的财务 <span style="text-transform:none;font-weight:400;">(USD mm)</span></div>
+        <div class="field-row"><span class="field-label">净利润</span><input class="ma-input" id="tgt-ni" type="number" /></div>
+        <div class="field-row"><span class="field-label">股数（百万股）</span><input class="ma-input" id="tgt-sh" type="number" /></div>
+        <div class="field-row"><span class="field-label">股价</span><input class="ma-input" id="tgt-px" type="number" /></div>
+
+        <div class="section-kicker">交易条款</div>
+        <div class="field-row"><span class="field-label">收购溢价 %</span><input class="ma-input" id="premium" type="number" step="1" value="30" /></div>
+        <div class="field-row" style="border-bottom:0;padding-bottom:2px;"><span class="field-label">支付方式</span></div>
+        <div class="seg" id="mix-seg" style="margin-bottom:8px;">
+          <button data-mix="cash" type="button">全现金</button>
+          <button data-mix="stock" type="button">全股票</button>
+          <button data-mix="mix" type="button" class="active">混合</button>
+        </div>
+        <div class="field-row" id="cash-pct-row"><span class="field-label">现金比例 %</span><input class="ma-input" id="cash-pct" type="number" step="1" value="50" /></div>
+        <div class="field-hint" id="mix-readout">股票 50% · 以新增买方股份支付</div>
+        <div class="field-row"><span class="field-label">融资成本 %</span><input class="ma-input" id="financing-cost" type="number" step="0.1" value="5.0" /></div>
+        <div class="field-row"><span class="field-label">税率 %</span><input class="ma-input" id="tax-rate" type="number" step="1" value="25" /></div>
+
+        <div class="section-kicker">成本协同</div>
+        <div class="seg" id="synergy-seg" style="margin-bottom:8px;">
+          <button data-synergy-mode="default" type="button" class="active">使用默认</button>
+          <button data-synergy-mode="manual" type="button">手动覆盖</button>
+          <button data-synergy-mode="zero" type="button">0 协同</button>
+        </div>
+        <div class="synergy-box">
+          <div class="synergy-value" id="default-synergy-value">-</div>
+          <div class="synergy-detail" id="default-synergy-detail">规则估算，仅计成本协同，可手动覆盖。</div>
+        </div>
+        <div class="field-row" id="manual-synergy-row" style="display:none;"><span class="field-label">手动协同（USD mm）</span><input class="ma-input" id="synergy" type="number" step="1" value="0" /></div>
+        <div class="field-hint" id="manual-synergy-hint" style="display:none;">手动覆盖默认成本协同；仍按 Pre-PPA 简化 EPS 链计算。</div>
+
+        <div class="run-row">
+          <button class="btn btn-primary" id="run-btn" type="button">开始推演</button>
+        </div>
+      </div>
+    </aside>
+
+    <section>
+      <div id="error-panel" class="error-panel"></div>
+
+      <div class="card headline-card">
+        <div class="headline-verdict" id="verdict">-</div>
+        <div class="headline-pct" id="verdict-pct">选择公司并开始推演。</div>
+        <div class="chip-row" id="chip-row"></div>
+        <div class="chip-tip" id="pre-ppa-tip"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">经济性拆解</div>
+        <div class="card-unit" style="color:var(--text-muted);font-size:11px;margin:-4px 0 10px;">金额单位：USD mm；每股数据：USD</div>
+        <div class="econ-grid" id="econ-grid">
+          <div class="placeholder-note">开始推演后显示要约价值、对价拆分、无协同结果、当前协同结果与打平所需协同。</div>
+        </div>
+      </div>
+
+      <div class="card viability-card">
+        <div class="card-title">现实可行性 / Real-World Viability</div>
+        <div class="via-head">
+          <span class="via-level" id="via-level">—</span>
+          <span class="via-summary" id="via-summary">开始推演后显示独立的现实可行性规则结果。</span>
+        </div>
+        <div class="via-flags" id="via-flags"></div>
+        <div class="placeholder-note" id="viability-note" style="margin-top:10px;">
+          规则推演，非法律意见。Viability 与经济性物理分开：它不进入 EPS / 增厚摊薄计算，也不与经济性合成总分。
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="cs-overlay" class="cs-overlay" style="display:none;">
+  <div class="cs-card">
+    <button class="cs-close" id="cs-close" type="button" title="Close">×</button>
+    <div class="cs-title">选择<span id="cs-role">买方</span></div>
+    <div class="cs-sub">搜索 V5.1 seed deck company cards：可输入代码、公司名、行业或战略标签。</div>
+    <input class="cs-search" id="cs-search" type="text" placeholder="搜索代码、公司名、行业或标签" autocomplete="off" />
+    <div class="cs-results" id="cs-results"></div>
+  </div>
+</div>
+
+<script src="/static/modeling/js/ma_studio.js"></script>
+</body>
+</html>

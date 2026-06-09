@@ -1,0 +1,22 @@
+# Runtime dependencies for the stock-dashboard app.
+# Loosely pinned (>= lower bound) so a fresh clone installs current, compatible
+# versions without locking to a single patch release.
+#
+#   python -m venv .venv
+#   pip install -r requirements.txt
+#   python app.py
+#
+# Tested on Python 3.13.
+
+Flask>=3.0
+flask-cors>=4.0
+
+# Market data sources (public, keyless). yfinance = US/HK via Yahoo Finance;
+# akshare = A-share (Shanghai/Shenzhen). akshare is heavier and only used on the
+# A-share code path; it is imported lazily, but is required for full coverage.
+yfinance>=0.2
+akshare>=1.12
+
+# Financial data wrangling + Excel (DCF / LBO) workbook export.
+pandas>=2.0
+openpyxl>=3.1

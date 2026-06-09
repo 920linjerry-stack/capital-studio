@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Case Workbook</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .case-container {
+      max-width: 800px;
+      margin-top: 0;
+      margin-right: auto;
+      margin-bottom: 0;
+      margin-left: auto;
+      padding-top: 20px;
+      padding-right: 20px;
+      padding-left: 20px;
+      transition: max-width 0.3s ease;
+    }
+    .case-container.is-analysis {
+      max-width: 1450px;
+      display: grid;
+      grid-template-columns: minmax(500px, 0.95fr) minmax(620px, 1.05fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .case-editor-wrap {
+      min-width: 0;
+    }
+    .impact-map {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      min-width: 0;
+    }
+    .case-container.is-analysis .impact-map {
+      display: block;
+      opacity: 1;
+    }
+    .case-memo-textarea-compact {
+      min-height: 74px;
+    }
+    .impact-concentration {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .impact-concentration-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .impact-concentration-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 3px 0;
+      color: var(--text-primary);
+    }
+    .impact-concentration-count {
+      font-family: "Consolas", monospace;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .impact-dim-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: var(--bg-tertiary);
+    }
+    .impact-dim-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .impact-dim-name-en {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+      font-weight: 400;
+    }
+    .impact-dim-section-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      margin-bottom: 2px;
+      letter-spacing: 0.3px;
+    }
+    .impact-dim-source {
+      font-size: 12px;
+      color: var(--text-primary);
+      padding: 1px 0;
+    }
+    .impact-dim-source-en {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .impact-dim-line {
+      font-size: 12px;
+      color: var(--text-primary);
+      padding: 1px 0;
+      font-family: "Consolas", monospace;
+    }
+    .driver-interpretation {
+      margin-top: 5px;
+      margin-left: 20px;
+      padding: 6px 8px;
+      border-left: 2px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .interpretation-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .interpretation-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .interpretation-edited-badge {
+      color: var(--text-muted);
+      font-size: 10px;
+      white-space: nowrap;
+      opacity: 0.8;
+    }
+    .interpretation-edit-btn {
+      margin-top: 4px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--accent);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .interpretation-textarea {
+      width: 100%;
+      min-height: 68px;
+      margin-top: 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 6px 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .interpretation-textarea[hidden] {
+      display: none;
+    }
+
+    .scenario-state-body {
+      min-width: 0;
+    }
+    .scenario-state-help {
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.55;
+      margin-top: -4px;
+      margin-bottom: 10px;
+    }
+    .scenario-state-help p {
+      margin: 0 0 3px 0;
+    }
+    .scenario-state-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 2px 0;
+    }
+    .scenario-state-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+    .scenario-state-table th,
+    .scenario-state-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 8px;
+      vertical-align: top;
+    }
+    .scenario-state-table th {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: left;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .scenario-state-heading {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .scenario-state-heading-zh {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .scenario-state-table th:not(:first-child),
+    .scenario-state-table td:not(:first-child) {
+      text-align: center;
+    }
+    .scenario-state-driver {
+      color: var(--text-primary);
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+    .scenario-state-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .scenario-state-select {
+      width: min(132px, 100%);
+      min-width: 118px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 4px 5px;
+      outline: none;
+    }
+    .scenario-state-select:focus {
+      border-color: var(--accent);
+    }
+    .scenario-state-badge {
+      font-size: 10px;
+      line-height: 1.2;
+      white-space: nowrap;
+      border-radius: 999px;
+      padding: 1px 6px;
+      padding-top: 1px;
+    }
+    .scenario-state-badge-default,
+    .scenario-state-badge-unknown {
+      color: var(--text-muted);
+      opacity: 0.85;
+    }
+    .scenario-state-badge-user-modified {
+      color: var(--accent);
+      font-weight: 500;
+      background: rgba(56, 139, 253, 0.08);
+    }
+    .assumption-bridge-panel {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .assumption-bridge-toggle {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 7px 9px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .assumption-bridge-toggle:hover,
+    .assumption-bridge-toggle:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .assumption-bridge-toggle-status {
+      color: var(--text-muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .assumption-bridge-collapsible {
+      margin-top: 10px;
+    }
+    .assumption-bridge-collapsible[hidden] {
+      display: none;
+    }
+    .assumption-bridge-collapsible .card-description {
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.55;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .preview-button-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+      margin-bottom: 0;
+    }
+    .preview-button-row .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .preview-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+    }
+    .preview-mask {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .preview-panel {
+      position: relative;
+      width: min(720px, calc(100vw - 32px));
+      max-height: 80vh;
+      margin: 8vh auto 0 auto;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+      padding: 18px 20px 20px 20px;
+    }
+    .preview-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .preview-close:hover,
+    .preview-close:focus {
+      color: var(--text-primary);
+      outline: none;
+    }
+    .preview-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 34px 4px 0;
+    }
+    .preview-note {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 0 0 14px 0;
+    }
+    .preview-scenarios {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .preview-scenario-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 11px;
+      min-width: 0;
+    }
+    .preview-scenario-label {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .preview-fair-value {
+      color: var(--text-primary);
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .preview-vs-base {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .preview-scenario-card [data-save-type] {
+      margin-top: 10px;
+      width: 100%;
+    }
+    .preview-scenario-card .save-status {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      min-height: 16px;
+    }
+    .preview-details {
+      margin-top: 14px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+    .preview-details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .preview-delta-title {
+      color: var(--text-muted);
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    .preview-delta-line {
+      padding: 2px 0;
+      line-height: 1.55;
+    }
+    .preview-loading {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 0;
+      font-size: 13px;
+    }
+    .preview-error {
+      color: var(--red);
+      padding: 20px 0;
+      font-size: 13px;
+    }
+    @media (max-width: 720px) {
+      .preview-scenarios {
+        grid-template-columns: 1fr;
+      }
+      .preview-panel {
+        margin-top: 4vh;
+        max-height: 90vh;
+      }
+    }
+    .assumption-bridge-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 2px 0;
+    }
+    .bridge-dimension {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 9px 10px;
+      margin-bottom: 8px;
+      background: var(--bg-tertiary);
+    }
+    .bridge-dimension h4 {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 500;
+      margin: 0 0 3px 0;
+    }
+    .bridge-dimension-en {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .bridge-dim-desc {
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 0 0 7px 0;
+    }
+    .bridge-scenario {
+      padding-top: 6px;
+      padding-bottom: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .bridge-scenario-label {
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+    .bridge-tier {
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.55;
+      padding: 1px 0;
+      font-weight: 500;
+    }
+    .bridge-tier-muted {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .bridge-bucket {
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.55;
+      padding: 1px 0;
+    }
+
+    .thesis-meta {
+      display: flex; gap: 10px; align-items: center;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .thesis-meta-ticker { color: var(--accent); }
+    .thesis-meta-time { font-family: "Consolas", monospace; }
+
+    .thesis-notes-block {
+      margin-top: 8px;
+      margin-right: 0;
+      margin-bottom: 12px;
+      margin-left: 0;
+    }
+    .thesis-notes-textarea {
+      width: 100%;
+      min-height: 90px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.55;
+      resize: vertical;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .thesis-notes-textarea:focus { border-color: var(--accent); }
+
+    .thesis-drivers-block { margin-bottom: 12px; }
+    .thesis-selected-block {
+      background: rgba(56, 139, 253, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .thesis-selected-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-selected-empty {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 4px 0;
+    }
+    .thesis-frameworks-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-framework-group {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .thesis-framework-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-primary);
+      user-select: none;
+    }
+    .thesis-framework-header .caret {
+      font-size: 10px; color: var(--text-muted);
+      transition: transform 0.15s;
+    }
+    .thesis-framework-counts {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .thesis-framework-toggle {
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .thesis-framework-group.collapsed .caret { transform: rotate(-90deg); }
+    .thesis-framework-group.collapsed .thesis-framework-body { display: none; }
+
+    .thesis-framework-body {
+      padding: 6px 10px 8px 10px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .thesis-driver-item {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: 12px; color: var(--text-primary);
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    .thesis-driver-item input[type="checkbox"] { margin-top: 2px; }
+    .thesis-driver-name { font-weight: 500; }
+    .thesis-driver-name-zh {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+    .thesis-driver-name-en {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .thesis-driver-desc {
+      font-size: 11px; color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .thesis-driver-desc-zh {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .thesis-driver-item.is-selected .thesis-driver-name-zh { color: var(--accent); }
+    .thesis-driver-item.is-selected::after {
+      content: "已选";
+      font-size: 10px;
+      color: var(--accent);
+      margin-left: 6px;
+      padding: 1px 5px;
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      line-height: 1.2;
+    }
+
+    .thesis-save-row {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 12px; margin-top: 6px;
+    }
+    .thesis-save-status {
+      font-size: 11px; color: var(--text-muted);
+    }
+    .thesis-save-status.saved { color: var(--green); }
+    .thesis-save-status.error { color: var(--red); }
+    .thesis-feedback-block {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--bg-tertiary);
+      border-left: 2px solid var(--accent);
+      border-radius: 3px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      display: none;
+    }
+    .thesis-feedback-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-feedback-item {
+      margin-top: 2px;
+      margin-right: 0;
+      margin-bottom: 2px;
+      margin-left: 0;
+    }
+    .thesis-feedback-driver { color: var(--accent); }
+    .thesis-feedback-arrow {
+      color: var(--text-muted);
+      margin-top: 0;
+      margin-right: 4px;
+      margin-bottom: 0;
+      margin-left: 4px;
+    }
+    @media (max-width: 900px) {
+      .case-container.is-analysis {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="logo">▸ INVESTMENT CASE</div>
+      <div class="subtitle">完整投资逻辑工作台</div>
+    </div>
+    <div class="header-right">
+      <a id="back-to-dcf" href="/modeling/dcf"
+         style="color:var(--accent);font-size:12px;text-decoration:none;">
+        ← 返回 DCF
+      </a>
+    </div>
+  </header>
+
+  <main class="container case-container" id="case-main">
+    <div class="case-editor-wrap">
+    <div class="card" id="case-panel">
+      <div class="card-title-row" style="margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;border:none;padding:0;">
+          投资逻辑 Thesis
+        </div>
+        <div class="thesis-meta" id="thesis-meta">
+          <span class="thesis-meta-ticker mono" id="thesis-ticker">--</span>
+          <span class="thesis-meta-time" id="thesis-last-modified">未保存</span>
+        </div>
+      </div>
+
+      <div class="thesis-notes-block">
+        <label class="field-label" for="core-thesis">Core Thesis / 核心观点</label>
+        <textarea id="core-thesis" class="thesis-notes-textarea case-memo-textarea-compact"
+                  placeholder="为什么看这家公司?"></textarea>
+      </div>
+
+      <div class="thesis-notes-block">
+        <label class="field-label" for="key-risks">Key Risks / 主要风险</label>
+        <textarea id="key-risks" class="thesis-notes-textarea case-memo-textarea-compact"
+                  placeholder="什么会推翻这个 thesis?"></textarea>
+      </div>
+
+      <div class="thesis-notes-block">
+        <label class="field-label" for="thesis-notes">Additional Notes / 补充备注</label>
+        <textarea id="thesis-notes" class="thesis-notes-textarea"
+                  placeholder="写下你为什么相信这只股票..."></textarea>
+      </div>
+
+      <div class="thesis-drivers-block">
+        <div class="field-label" style="margin-bottom:6px;">投资驱动因素 Drivers</div>
+
+        <div class="thesis-selected-block">
+          <div class="thesis-selected-label">已选(<span id="thesis-selected-count">0</span>)</div>
+          <div id="thesis-selected-drivers"></div>
+        </div>
+
+        <div class="thesis-frameworks-block" style="margin-top:10px;">
+          <div class="thesis-frameworks-label">按分类浏览</div>
+          <div id="thesis-drivers-groups"></div>
+        </div>
+      </div>
+
+      <div class="thesis-save-row">
+        <span class="thesis-save-status" id="thesis-save-status"></span>
+        <button class="btn btn-primary" id="thesis-save-btn"
+                onclick="saveThesis()">保存 Thesis</button>
+      </div>
+
+      <div id="thesis-feedback" class="thesis-feedback-block"></div>
+    </div>
+    </div>
+
+    <aside class="impact-map" id="impact-map" aria-hidden="true">
+      <div class="card">
+        <div class="card-title">Driver Impact Map</div>
+        <div class="impact-concentration" id="impact-concentration"></div>
+        <div class="impact-dimensions" id="impact-dimensions"></div>
+      </div>
+      <div class="card" id="scenario-state-card">
+        <div class="card-title">Scenario State / 情景判断</div>
+        <div class="scenario-state-help">
+          <p>系统已根据你选择的 drivers 生成默认情景判断，你可以按自己的看法微调。</p>
+          <p>用于判断在正常、乐观、悲观情况下，投资因素会变好、差不多还是变差；当前仅用于解释 thesis，不会自动修改 DCF assumptions。</p>
+        </div>
+        <div class="scenario-state-body" id="scenario-state-body"></div>
+        <div class="preview-button-row">
+          <button id="preview-dcf-btn" class="btn btn-primary" disabled>
+            Preview DCF Impact / 预览估值影响
+          </button>
+        </div>
+        <div class="assumption-bridge-panel" id="assumption-bridge-card">
+          <button type="button"
+                  class="assumption-bridge-toggle"
+                  id="assumption-bridge-toggle"
+                  aria-expanded="false"
+                  aria-controls="assumption-bridge-collapsible">
+            <span>查看假设桥接 / Assumption Bridge</span>
+            <span class="assumption-bridge-toggle-status" id="assumption-bridge-toggle-status">展开</span>
+          </button>
+          <div class="assumption-bridge-collapsible" id="assumption-bridge-collapsible" hidden>
+            <p class="card-description">
+              系统根据情景判断，整理这些 drivers 可能影响的估值假设方向。<br>
+              <strong>幅度等级仅反映来源密集程度，不代表实际财务影响幅度。</strong><br>
+              当前仅解释方向，不会自动修改 DCF assumptions。
+            </p>
+            <div id="assumption-bridge-content"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/static/modeling/js/thesis_shared.js?v=340"></script>
+  <script src="/static/modeling/js/assumption_effects.js?v=342"></script>
+  <script src="/static/modeling/js/preview_dcf.js?v=344"></script>
+  <script src="/static/modeling/js/case.js?v=340"></script>
+  <div id="preview-overlay" class="preview-overlay" style="display:none;">
+    <div class="preview-mask"></div>
+    <div class="preview-panel">
+      <button class="preview-close" aria-label="关闭">×</button>
+      <div class="preview-content" id="preview-content"></div>
+    </div>
+  </div>
+</body>
+</html>

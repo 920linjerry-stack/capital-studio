@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>股票投研追踪面板</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    .live-dot {
+      display: none;
+      color: #3fb950;
+      font-size: 13px;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1.0; }
+      50%      { opacity: 0.4; }
+    }
+    .toggle-wrap {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted);
+      cursor: pointer; user-select: none;
+    }
+    .toggle-wrap input[type="checkbox"] { display: none; }
+    .toggle-track {
+      position: relative; width: 34px; height: 18px;
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border); border-radius: 9px;
+      transition: background-color 0.2s, border-color 0.2s; flex-shrink: 0;
+    }
+    .toggle-track::after {
+      content: ""; position: absolute; top: 2px; left: 2px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background-color: var(--text-muted);
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .toggle-wrap input:checked + .toggle-track { background-color: #1a4a1e; border-color: #3fb950; }
+    .toggle-wrap input:checked + .toggle-track::after { transform: translateX(16px); background-color: #3fb950; }
+
+    /* 建模工具导航入口 */
+    .nav-modeling {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 4px 10px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font-family: "Consolas", monospace;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+    }
+    .nav-modeling:hover { background-color: rgba(56,139,253,0.1); }
+    .nav-modeling { display: none; }
+    /* V5 Deal Studio 独立产品入口 banner */
+    .deal-studio-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 18px 22px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(56,139,253,0.14), rgba(56,139,253,0.03));
+      text-decoration: none;
+      color: var(--text-primary);
+      transition: border-color 0.2s, background 0.2s, transform 0.1s;
+    }
+    .deal-studio-banner:hover {
+      border-color: #5aa0ff;
+      background: linear-gradient(135deg, rgba(56,139,253,0.22), rgba(56,139,253,0.06));
+    }
+    .deal-studio-banner:active { transform: translateY(1px); }
+    .dsb-main { min-width: 0; }
+    .dsb-kicker {
+      display: inline-block;
+      font-family: "Consolas", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      border: 1px solid rgba(56,139,253,0.6);
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+    }
+    .dsb-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .dsb-subtitle {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+    .dsb-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.6;
+      max-width: 640px;
+    }
+    .dsb-ctas {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dsb-cta {
+      flex-shrink: 0;
+      white-space: nowrap;
+      text-align: center;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0d1117;
+      background: var(--accent);
+      border-radius: 6px;
+      padding: 10px 18px;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .dsb-cta:hover { background: #5aa0ff; }
+    .dsb-cta-secondary {
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid var(--accent);
+    }
+    .dsb-cta-secondary:hover { background: rgba(56,139,253,0.12); color: #5aa0ff; }
+    .date-placeholder-wrap {
+      position: relative;
+    }
+    .date-placeholder-wrap .date-placeholder-text {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-family: "Consolas", monospace;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    .date-placeholder-wrap:focus-within .date-placeholder-text,
+    .date-placeholder-wrap.has-value .date-placeholder-text {
+      display: none;
+    }
+    .date-placeholder-wrap:not(.has-value):not(:focus-within) input::-webkit-datetime-edit {
+      color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">▸ PORTFOLIO TRACKER</div>
+    <div class="subtitle">个人股票投研追踪面板</div>
+  </div>
+
+  <div class="header-right">
+    <!-- ★ 新增：建模工具入口 -->
+    <a href="/modeling" class="nav-modeling">📊 建模工具</a>
+
+    <span class="fx-warn" id="fx-warn" title="部分汇率使用近似值，非实时数据">⚠ 汇率使用近似值</span>
+
+    <details class="modeling-menu">
+      <summary>建模工具 ▼</summary>
+      <div class="modeling-menu-list">
+        <a href="/modeling/dcf">DCF 估值模型</a>
+        <a href="/modeling/lbo">LBO 收购模型</a>
+      </div>
+    </details>
+
+    <div class="fx-selector">
+      <label for="base-select">Base:</label>
+      <select id="base-select" onchange="onBaseChange()">
+        <option value="HKD" selected>HKD</option>
+        <option value="USD">USD</option>
+        <option value="CNY">CNY</option>
+      </select>
+    </div>
+
+    <label class="toggle-wrap" title="开启后每60秒自动刷新行情">
+      <input type="checkbox" id="auto-refresh-toggle" onchange="onToggleAutoRefresh()" />
+      <span class="toggle-track"></span>
+      <span>自动刷新</span>
+    </label>
+
+    <span class="live-dot" id="live-dot" title="实时模式已开启">◉</span>
+
+    <div id="last-updated" style="font-size:11px;color:var(--text-muted);"></div>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="card">
+    <div class="card-title">
+      组合概览
+      <span id="summary-base-label" style="margin-left:6px;color:var(--accent);font-size:10px;"></span>
+    </div>
+    <div class="summary-grid">
+      <div class="metric">
+        <div class="metric-label">总市值 <span class="metric-currency" id="lbl-market"></span></div>
+        <div class="metric-value mono" id="total-market">--</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">总成本 <span class="metric-currency" id="lbl-cost"></span></div>
+        <div class="metric-value mono" id="total-cost">--</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">累计盈亏 <span class="metric-currency" id="lbl-pnl"></span></div>
+        <div class="metric-value mono" id="total-pnl">--</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">累计收益率</div>
+        <div class="metric-value mono" id="total-pnl-pct">--</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">当日盈亏 <span class="metric-currency" id="lbl-daily"></span></div>
+        <div class="metric-value mono" id="daily-pnl">--</div>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">持仓分布（按基准货币市值）</div>
+      <div class="pie-container"><canvas id="pie-chart"></canvas></div>
+      <div id="pie-legend"></div>
+    </div>
+  </div>
+
+  <div class="deal-studio-banner">
+    <div class="dsb-main">
+      <div class="dsb-kicker">NEW · V5</div>
+      <div class="dsb-title">M&amp;A Deal Studio</div>
+      <div class="dsb-subtitle">并购推演 / Deal Arena</div>
+      <div class="dsb-desc">选择两家公司，推演收购溢价、支付方式、EPS 增厚/摊薄和协同支撑状态。Deal Studio 是全量分析；Deal Arena Lite 是轻牌桌，两张牌即出结果。</div>
+    </div>
+    <div class="dsb-ctas">
+      <a href="/modeling/ma" class="dsb-cta">进入 Deal Studio →</a>
+      <a href="/modeling/ma/arena" class="dsb-cta dsb-cta-secondary">进入 Deal Arena Lite →</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">添加自选股</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>股票代码</label>
+        <input type="text" id="input-symbol" placeholder="AAPL / 0700.HK / 600519.SS" />
+      </div>
+      <div class="form-group">
+        <label>买入价</label>
+        <input type="number" id="input-cost" placeholder="0.00" step="0.01" min="0" />
+      </div>
+      <div class="form-group">
+        <label>持仓数量（股）</label>
+        <input type="number" id="input-qty" placeholder="100" min="0" />
+      </div>
+      <div class="form-group">
+        <label>买入日期（可选）</label>
+        <div class="date-placeholder-wrap" id="input-date-wrap">
+          <input type="date" id="input-date"
+                 oninput="this.parentElement.classList.toggle('has-value', !!this.value)"
+                 onchange="this.parentElement.classList.toggle('has-value', !!this.value)" />
+          <span class="date-placeholder-text">YYYY/MM/DD</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addStock()">+ 添加</button>
+      </div>
+    </div>
+    <div id="add-error" class="error-msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      持仓明细
+      <span style="margin-left:12px;">
+        <button class="btn btn-secondary" onclick="loadPortfolio()" style="font-size:11px;padding:3px 8px;">↻ 刷新</button>
+      </span>
+    </div>
+    <div id="loading" class="loading">正在获取行情数据，请稍候…</div>
+    <div class="table-wrap" id="table-wrap" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;">代码 / 名称</th>
+            <th>现价</th><th>涨跌幅</th><th>买入价</th><th>持仓量</th>
+            <th>市值</th><th>盈亏金额</th><th>盈亏%</th><th>当日盈亏</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body"></tbody>
+      </table>
+    </div>
+    <div id="empty-hint" style="display:none;text-align:center;color:var(--text-muted);padding:30px 0;font-size:13px;">
+      暂无持仓，请在上方添加股票
+    </div>
+  </div>
+
+</main>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

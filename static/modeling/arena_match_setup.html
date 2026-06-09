@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Arena Match · 对局设置 — Match Setup</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* V5.9.2 Match Setup — the lobby between the War Room and the formal Match
+       table. Front-end only: it just picks two robot opponents + their
+       difficulties and hands them to the Play Table via sessionStorage. No
+       engine / API / randomness in the financial sense — the only "random" is a
+       controlled session-seeded pick for the Randomize difficulty convenience. */
+    .ms-wrap { max-width: 920px; margin: 0 auto; padding: 8px 0 40px; }
+    .ms-intro { font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 4px; }
+    .ms-intro b { color: var(--text-primary); }
+    .ms-rules {
+      display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 20px;
+    }
+    .ms-rule {
+      flex: 1 1 200px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .ms-rule-k { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent); font-weight: 800; }
+    .ms-rule-v { font-size: 12px; color: var(--text-muted); line-height: 1.55; margin-top: 5px; }
+
+    .ms-seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .ms-seat {
+      background: linear-gradient(180deg, #11202b 0%, #0c1722 100%);
+      border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 16px;
+      box-shadow: inset 0 0 50px rgba(0,0,0,0.4);
+    }
+    .ms-seat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+    .ms-seat-title { font-size: 14px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.3px; }
+    .ms-seat-badge {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: #0d1117;
+      background: linear-gradient(135deg, #58a6ff, #3fb950); border-radius: 999px; padding: 3px 10px;
+    }
+    .ms-seat-sub { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px; }
+    .ms-diff-list { display: flex; flex-direction: column; gap: 7px; }
+    .ms-diff {
+      display: flex; align-items: center; gap: 11px; cursor: pointer;
+      background: rgba(7,12,18,0.5); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 12px; transition: border-color 0.12s, background 0.12s;
+    }
+    .ms-diff:hover { border-color: var(--accent); }
+    .ms-diff.selected { border-color: var(--accent); background: rgba(56,139,253,0.10); box-shadow: 0 0 0 1px var(--accent); }
+    .ms-diff input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+    .ms-diff-body { min-width: 0; }
+    .ms-diff-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .ms-diff-desc { font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-top: 2px; }
+    .ms-seat-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .ms-rand-btn {
+      font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+      color: var(--accent); background: rgba(13,17,23,0.6); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 12px;
+    }
+    .ms-rand-btn:hover { border-color: var(--accent); }
+    .ms-seat-pick { font-size: 11px; color: var(--text-muted); }
+    .ms-seat-pick b { color: #3fb950; }
+
+    .ms-controls {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .ms-controls-left { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ms-ghost {
+      font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap;
+      color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 16px; cursor: pointer;
+    }
+    .ms-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .ms-start {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; white-space: nowrap;
+      color: #0d1117; background: linear-gradient(135deg, #58a6ff, #3fb950); border: 0;
+      border-radius: 9px; padding: 11px 22px; box-shadow: 0 2px 16px rgba(56,139,253,0.35);
+    }
+    .ms-start:hover { filter: brightness(1.08); }
+    .ms-note { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-top: 16px; }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">DEAL ARENA · MATCH SETUP</div>
+    <div class="subtitle">对局设置 · 选择两个机器人对手 · 五回合并购牌局</div>
+  </div>
+  <div class="header-right">
+    <a href="/modeling/ma/arena" style="color:var(--accent);font-size:12px;text-decoration:none;">← 返回备战区 · War Room</a>
+    <a href="/modeling/ma" style="color:var(--accent);font-size:12px;text-decoration:none;">Deal Studio（全量分析）</a>
+  </div>
+</header>
+
+<main class="container" style="padding-top:20px;">
+  <div class="ms-wrap">
+    <div class="ms-intro">
+      这是 <b>对局设置 / Match Setup</b>，介于备战区和正式牌桌之间。一局 <b>Deal Arena Match · 五回合并购牌局</b>：
+      你和两个机器人对手各打 5 笔 deal，共最多 15 笔；每回合按本局 <b>Match Points</b> 比分，5 回合后结算 winner。
+      Match Points 只用于<b>本局胜负</b>，不是投资评级，也不进入经济性 / 现实可行性双榜或 EPS 计算。
+    </div>
+
+    <div class="ms-rules">
+      <div class="ms-rule"><div class="ms-rule-k">回合数 · Rounds</div><div class="ms-rule-v">共 <b style="color:var(--text-primary)">5</b> 回合。每回合你先打一笔 deal，两个机器人各自打一笔。</div></div>
+      <div class="ms-rule"><div class="ms-rule-k">对手 · Robots</div><div class="ms-rule-v">两个确定性机器人，各选难度档；同一回合不会打出完全相同的 directed pair。</div></div>
+      <div class="ms-rule"><div class="ms-rule-k">结算 · Scoring</div><div class="ms-rule-v">本局 Match Points 比总分高者获胜。可在结算页把最佳交易加入候选队列复盘。</div></div>
+    </div>
+
+    <div class="ms-seats" id="ms-seats">
+      <!-- Seat cards are built by match_setup.js (safe DOM). -->
+    </div>
+
+    <div class="ms-controls">
+      <div class="ms-controls-left">
+        <a class="ms-ghost" href="/modeling/ma/arena">返回备战区 · War Room</a>
+        <button class="ms-ghost" id="ms-randomize-all" type="button">全部随机 · Randomize All</button>
+      </div>
+      <button class="ms-start" id="ms-start-match" type="button">确认开局 · Start Match →</button>
+    </div>
+
+    <div class="ms-note">
+      难度可以手动选择，也可以点「随机抽取难度」用本局会话种子做一次受控伪随机选择（不影响任何金融计算或机器人策略）。
+      非法难度会回退到「分析师 / Analyst」。设置仅保存在本会话（sessionStorage），刷新或换标签页可能需要重新设置。
+    </div>
+  </div>
+</main>
+
+<script src="/static/modeling/js/robot_opponent.js"></script>
+<script src="/static/modeling/js/match_setup.js"></script>
+</body>
+</html>

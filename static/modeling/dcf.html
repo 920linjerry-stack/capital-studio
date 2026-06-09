@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DCF Valuation Workbook</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ── DCF 页面特有样式 ──────────────────────────────────── */
+    .dcf-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .dcf-review-rail {
+      display: none;
+      margin-bottom: 12px;
+    }
+    .normalized-ebit-review-card {
+      margin: 0 0 12px 0;
+      padding: 14px 16px;
+      background: rgba(210, 153, 34, 0.10);
+      border: 1px solid rgba(210, 153, 34, 0.42);
+      border-left: 3px solid var(--gold);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .normalized-ebit-review-card .review-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .normalized-ebit-review-card .review-muted {
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .normalized-ebit-review-card button {
+      width: 100%;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.35;
+    }
+    .dcf-inputs {
+      position: sticky;
+      top: 0;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .dcf-landing {
+      max-width: 480px;
+      margin: 80px auto 0;
+      text-align: center;
+    }
+    .dcf-landing h2 {
+      font-size: 22px; font-weight: 700; color: var(--text-primary);
+      margin-bottom: 8px; font-family: "Consolas", monospace;
+    }
+    .dcf-landing p { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; }
+    .dcf-search-row { display: flex; gap: 8px; }
+    .dcf-search-row input { flex: 1; font-size: 16px; padding: 10px 14px; width: auto; }
+
+    /* 字段行 */
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-label {
+      font-size: 12px; color: var(--text-muted);
+      flex: 1; min-width: 0; white-space: nowrap;
+    }
+    .field-input-group {
+      display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+      flex: 0 0 156px;
+      min-width: 156px;
+    }
+    /* 单位标识小字 */
+    .field-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: "Consolas", monospace;
+      letter-spacing: 0.3px;
+      min-width: 60px;
+      text-align: left;
+    }
+    .dcf-input {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 7px;
+      color: #4d94ff;
+      font-family: "Consolas", monospace;
+      font-size: 12px;
+      text-align: right;
+      width: 90px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .dcf-input:focus { border-color: var(--accent); }
+
+    .field-warn {
+      font-size: 11px; color: var(--red);
+      margin-top: 2px; display: none;
+    }
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .tv-method-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tv-btn {
+      padding: 3px 10px; border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      font-size: 11px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tv-btn.active {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+
+    /* 卡片标题里的右侧控件（单位切换器）*/
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .unit-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: none;
+    }
+    .unit-selector select {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-primary);
+      font-family: "Consolas", monospace;
+      font-size: 11px;
+      padding: 2px 5px;
+      cursor: pointer;
+      outline: none;
+    }
+    .unit-selector select:focus { border-color: var(--accent); }
+
+    /* 数据源提示横幅 */
+    .source-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 4px 0 10px 0;
+      padding: 6px 10px;
+      background-color: rgba(210, 153, 34, 0.08);
+      border-left: 2px solid var(--gold);
+      border-radius: 3px;
+      line-height: 1.5;
+    }
+    .source-hint .src-name {
+      color: var(--gold);
+      font-weight: 600;
+      font-family: "Consolas", monospace;
+    }
+
+    /* 结果区 */
+    .intrinsic-card {
+      text-align: center; padding: 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px; margin-bottom: 12px;
+    }
+    .intrinsic-label {
+      font-size: 11px; color: var(--text-muted);
+      letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px;
+    }
+    .intrinsic-value {
+      font-size: 48px; font-weight: 800;
+      font-family: "Consolas", monospace; line-height: 1.1;
+    }
+    .intrinsic-upside { font-size: 18px; font-family: "Consolas", monospace; margin-top: 4px; }
+    .intrinsic-vs    { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+    .bridge-table { width: 100%; font-size: 12px; }
+    .bridge-table td {
+      padding: 5px 8px; font-family: "Consolas", monospace;
+      border-bottom: 1px solid var(--border);
+    }
+    .bridge-table td:last-child { text-align: right; }
+    #results-panel.stale-result .card {
+      opacity: 0.5;
+      filter: grayscale(0.35);
+    }
+    .stale-result-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      border-radius: 6px;
+      background: rgba(127, 29, 29, 0.18);
+      color: #fecaca;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .stale-result-clear {
+      border: 1px solid rgba(254, 202, 202, 0.55);
+      border-radius: 4px;
+      background: transparent;
+      color: #fecaca;
+      padding: 4px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .bridge-total td {
+      font-weight: 700;
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .sensitivity-table {
+      border-collapse: collapse; font-size: 11px;
+      font-family: "Consolas", monospace; width: 100%;
+    }
+    .sensitivity-table th,
+    .sensitivity-table td {
+      padding: 5px 8px; text-align: center;
+      border: 1px solid var(--border); white-space: nowrap;
+    }
+    .sensitivity-table th {
+      background: var(--bg-tertiary); color: var(--text-muted); font-size: 10px;
+    }
+    .sens-highlight {
+      background: rgba(56, 139, 253, 0.2) !important;
+      color: var(--accent) !important; font-weight: 700;
+    }
+    .sens-cheap  { color: var(--green); }
+    .sens-pricy  { color: var(--red);   }
+
+    .fcf-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 12px; font-family: "Consolas", monospace;
+    }
+    .fcf-table th, .fcf-table td {
+      padding: 5px 10px; text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    .fcf-table th:first-child, .fcf-table td:first-child {
+      text-align: left; color: var(--text-muted); font-size: 11px;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--border) 50%, var(--bg-tertiary) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px; height: 20px; margin: 6px 0;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .template-selector {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .template-badge {
+      background: var(--accent); color: #fff;
+      border-radius: 3px; padding: 2px 8px;
+      font-size: 11px; font-weight: 600;
+    }
+    .template-coming { color: var(--border); font-size: 11px; }
+
+    /* ── v3.3.0 段 3：thesis panel ──────────────────────── */
+    .thesis-meta {
+      display: flex; gap: 10px; align-items: center;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .thesis-meta-ticker { color: var(--accent); }
+    .thesis-meta-time { font-family: "Consolas", monospace; }
+
+    .thesis-notes-block { margin: 8px 0 12px 0; }
+    .thesis-notes-textarea {
+      width: 100%;
+      min-height: 90px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.55;
+      resize: vertical;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .thesis-notes-textarea:focus { border-color: var(--accent); }
+
+    .thesis-drivers-block { margin-bottom: 12px; }
+    .thesis-selected-block {
+      background: rgba(56, 139, 253, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .thesis-selected-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-selected-empty {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 4px 0;
+    }
+    .thesis-frameworks-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-framework-group {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .thesis-framework-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-primary);
+      user-select: none;
+    }
+    .thesis-framework-header .caret {
+      font-size: 10px; color: var(--text-muted);
+      transition: transform 0.15s;
+    }
+    .thesis-framework-counts {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .thesis-framework-toggle {
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .thesis-framework-group.collapsed .caret { transform: rotate(-90deg); }
+    .thesis-framework-group.collapsed .thesis-framework-body { display: none; }
+
+    .thesis-framework-body {
+      padding: 6px 10px 8px 10px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .thesis-driver-item {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: 12px; color: var(--text-primary);
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    .thesis-driver-item input[type="checkbox"] { margin-top: 2px; }
+    .thesis-driver-name { font-weight: 500; }
+    .thesis-driver-name-zh {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+    .thesis-driver-name-en {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-left: 4px;
+    }
+    .thesis-driver-desc {
+      font-size: 11px; color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .thesis-driver-desc-zh {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .thesis-driver-item.is-selected .thesis-driver-name-zh { color: var(--accent); }
+    .thesis-driver-item.is-selected::after {
+      content: "已选";
+      font-size: 10px;
+      color: var(--accent);
+      margin-left: 6px;
+      padding: 1px 5px;
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      line-height: 1.2;
+    }
+
+    .thesis-save-row {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 12px; margin-top: 6px;
+    }
+    .thesis-save-status {
+      font-size: 11px; color: var(--text-muted);
+    }
+    .thesis-save-status.saved { color: var(--green); }
+    .thesis-save-status.error { color: var(--red); }
+    .thesis-feedback-block {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--bg-tertiary);
+      border-left: 2px solid var(--accent);
+      border-radius: 3px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      display: none;
+    }
+    .thesis-feedback-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
+    .thesis-feedback-item { margin: 2px 0; }
+    .thesis-feedback-driver { color: var(--accent); }
+    .thesis-feedback-arrow {
+      color: var(--text-muted);
+      margin: 0 4px;
+    }
+
+    .thesis-card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .thesis-card-open-link {
+      color: var(--accent); font-size: 11px; text-decoration: none;
+    }
+    .thesis-card-meta {
+      display: flex; gap: 10px;
+      font-size: 11px; color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .thesis-card-notes {
+      font-size: 12px; color: var(--text-primary);
+      margin-bottom: 8px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-height: 1.5em;
+    }
+    .thesis-card-notes-empty {
+      font-style: italic; color: var(--text-muted);
+    }
+    .thesis-card-drivers, .thesis-card-affects {
+      font-size: 12px;
+      color: var(--text-primary);
+      margin: 4px 0;
+      line-height: 1.6;
+    }
+    .thesis-card-drivers-label, .thesis-card-affects-label {
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+    .thesis-card-actions {
+      display: flex; justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    @media (min-width: 1950px) {
+      .dcf-review-rail.has-card {
+        display: block;
+        position: fixed;
+        left: max(16px, calc((100vw - 1400px) / 2 - 264px));
+        top: var(--dcf-review-top, 120px);
+        width: 260px;
+        z-index: 20;
+        margin-bottom: 0;
+      }
+    }
+    @media (max-width: 900px) {
+      .dcf-layout { grid-template-columns: 1fr; }
+      .dcf-inputs { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">▸ MODELING STUDIO</div>
+    <div class="subtitle">DCF 估值工具 · Beta</div>
+  </div>
+  <div class="header-right">
+    <details class="modeling-menu">
+      <summary>建模工具 ▼</summary>
+      <div class="modeling-menu-list">
+        <a href="/modeling/dcf">DCF 估值模型</a>
+        <a href="/modeling/lbo">LBO 收购模型</a>
+      </div>
+    </details>
+    <a href="/" style="color:var(--accent);font-size:12px;text-decoration:none;">← 持仓面板</a>
+  </div>
+</header>
+
+<main class="container" style="padding-top:20px;">
+  <div id="scenario-context-bar" style="display:none;"></div>
+
+  <!-- 首页搜索 -->
+  <div id="landing-section" class="dcf-landing" style="display:none;">
+    <div style="font-size:32px;margin-bottom:12px;">📊</div>
+    <h2>DCF 估值工具</h2>
+    <p>输入股票代码，系统自动拉取财报数据并生成 DCF 估值。<br>
+       支持美股 (AAPL)、港股 (0700.HK)、A 股 (600519.SS)</p>
+    <div class="dcf-search-row">
+      <input type="text" id="landing-input" class="mono"
+             placeholder="AAPL / 0700.HK / 600519.SS"
+             onkeydown="if(event.key==='Enter') goValuate()" />
+      <button class="btn btn-primary" onclick="goValuate()" style="white-space:nowrap;">
+        开始估值 →
+      </button>
+    </div>
+  </div>
+
+  <!-- 加载骨架 -->
+  <div id="loading-section" style="display:none;">
+    <div class="card">
+      <div class="skeleton" style="width:40%;height:24px;"></div>
+      <div class="skeleton" style="width:70%;"></div>
+      <div class="skeleton" style="width:55%;"></div>
+    </div>
+  </div>
+
+  <div class="dcf-review-rail" id="dcf-review-rail"></div>
+
+  <div id="dcf-main" class="dcf-layout" style="display:none;">
+
+    <!-- ════ 左侧：输入区 ════ -->
+    <div class="dcf-inputs">
+
+      <!-- 公司信息 -->
+      <div class="card">
+        <div class="card-title">公司信息</div>
+        <div class="field-row">
+          <span class="field-label">代码</span>
+          <span class="field-unit mono" id="info-symbol" style="text-align:right;">--</span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">公司名</span>
+          <span class="field-unit" id="info-name" style="font-family:sans-serif;font-size:12px;text-align:right;color:var(--text-primary);">--</span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">当前股价</span>
+          <span class="field-unit mono" id="info-price" style="text-align:right;color:var(--text-primary);">--</span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">市场 / 货币</span>
+          <span class="field-unit mono" id="info-market" style="text-align:right;color:var(--text-primary);">--</span>
+        </div>
+      </div>
+
+      <!-- 假设参数 -->
+      <div class="card">
+        <div class="card-title-row" style="margin-bottom:8px;">
+          <div class="card-title" style="margin-bottom:0;border:none;padding:0;">
+            假设参数 <span style="color:var(--accent);font-size:10px;">蓝色字段可编辑</span>
+          </div>
+          <!-- 单位切换器 -->
+          <div class="unit-selector">
+            <span>显示单位:</span>
+            <select id="unit-select" onchange="onUnitChange()">
+              <option value="actual">元</option>
+              <option value="thousands">千</option>
+              <option value="millions" selected>百万</option>
+              <option value="yi">亿</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 数据源提示 -->
+        <div class="source-hint" id="source-hint">
+          ⚠ 默认值由 <span class="src-name" id="src-name">--</span> 自动估算，可能存在偏差，建议核对关键参数后再使用
+        </div>
+        <div class="source-hint" id="model-suitability-warning" style="display:none;border-color:#f59e0b;background:#fff7ed;color:#7c2d12;">
+          <strong>DCF unavailable for this security type</strong>
+          <div id="model-suitability-message" style="margin-top:4px;"></div>
+          <div id="model-suitability-methods" style="margin-top:4px;"></div>
+        </div>
+
+        <div class="field-row">
+          <span class="field-label">预测期</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="p-years" min="3" max="10" step="1" onchange="recalc()" />
+            <span class="field-unit">年</span>
+          </div>
+        </div>
+
+        <div class="field-row" style="display:none;flex-direction:column;align-items:flex-start;">
+          <div style="display:flex;justify-content:space-between;width:100%;">
+            <span class="field-label">FCF 增长率（显性期）</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-fcf-growth" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+          </div>
+          <div class="field-hint">参考：成熟公司 2-5%，中等成长 5-10%，高成长 10-20%</div>
+          <div class="field-warn" id="warn-fcf-growth">⚠ 增长率过高，建议核实</div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">
+            Operating Forecast
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 156px;gap:8px 10px;width:100%;align-items:center;">
+            <span class="field-label">Revenue Growth</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-revenue-growth" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">EBIT Margin</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-ebit-margin" step="0.1" onchange="markOperatingOverride('ebit_margin');recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">D&A % Rev</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-da-pct-revenue" step="0.1" onchange="markOperatingOverride('da_pct_revenue');recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">CapEx % Rev</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-capex-pct-revenue" step="0.1" onchange="markOperatingOverride('capex_pct_revenue');recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">Delta NWC % Rev</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-wc-change-pct-revenue" step="0.1" onchange="markOperatingOverride('wc_change_pct_revenue');recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+          </div>
+          <div class="field-hint">Single-value assumptions apply to all forecast years. Delta NWC % Rev is a legacy/reference fallback; the active Excel export uses schedule-derived Delta NWC when the 3FS schedules are available.</div>
+          <div class="field-warn" id="warn-revenue-growth">Revenue growth exceeds 40%; please review.</div>
+
+          <!-- V3.9.0 Forecast Path Upgrade v1: advanced 5-year path editor.
+               Defaults to flat expansion of the single values above so headline
+               IV is unchanged unless the analyst shapes the path. -->
+          <details style="width:100%;margin-top:8px;">
+            <summary style="cursor:pointer;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">
+              Advanced Forecast Path (Year 1 - Year 5)
+            </summary>
+            <div id="forecast-path-editor" style="margin-top:8px;display:grid;grid-template-columns:minmax(0,1.2fr) repeat(5,minmax(0,1fr));gap:6px 8px;align-items:center;font-size:12px;">
+              <div></div>
+              <div style="text-align:center;color:var(--text-muted);">Y1</div>
+              <div style="text-align:center;color:var(--text-muted);">Y2</div>
+              <div style="text-align:center;color:var(--text-muted);">Y3</div>
+              <div style="text-align:center;color:var(--text-muted);">Y4</div>
+              <div style="text-align:center;color:var(--text-muted);">Y5</div>
+            </div>
+            <div class="field-hint" style="margin-top:6px;">
+              Year cells are user-editable inputs in percent. Leaving a row flat preserves the headline IV; tilting it shapes the explicit forecast period. Path values override the single value above when present.
+            </div>
+          </details>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;">
+          <div style="display:flex;justify-content:space-between;width:100%;">
+            <span class="field-label">永续增长率 g</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-terminal-g" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+          </div>
+          <div class="field-warn" id="warn-g">⚠ 高于发达市场长期 GDP，偏激进</div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;">
+          <div style="display:flex;justify-content:space-between;width:100%;">
+            <span class="field-label">WACC</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-wacc" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+          </div>
+          <div class="field-warn" id="warn-wacc">⚠ 低于一般折现率水平，请确认</div>
+        </div>
+
+        <div class="field-row">
+          <span class="field-label">Exit Multiple</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="p-exit-multiple" step="0.5" onchange="recalc()" />
+            <span class="field-unit">×</span>
+          </div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <span class="field-label">终值方法</span>
+          <div class="tv-method-group" id="tv-method-group">
+            <button class="tv-btn" data-val="gordon"  onclick="setTVMethod('gordon')">Gordon Growth</button>
+            <button class="tv-btn" data-val="exit"    onclick="setTVMethod('exit')">Exit Multiple</button>
+            <button class="tv-btn active" data-val="average" onclick="setTVMethod('average')">两者平均</button>
+          </div>
+        </div>
+
+        <!-- V3.7.3: Net Debt Treatment selector. Default = Reported / Input
+             Net Debt, which preserves V3.7.2 IV. Persisted into scenarios. -->
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <span class="field-label">Net Debt Treatment</span>
+          <select id="p-net-debt-treatment" class="dcf-input" style="width:100%;" onchange="recalc()">
+            <option value="reported_input_net_debt">Reported / Input Net Debt</option>
+            <option value="debt_less_cash">Debt less Cash</option>
+            <option value="debt_less_cash_and_st_investments">Debt less Cash &amp; ST Investments</option>
+            <option value="debt_less_cash_and_total_marketable_securities">Debt less Cash &amp; Total Marketable Securities</option>
+          </select>
+          <div class="field-hint">Net Debt = Debt - Cash - selected marketable securities; negative net debt is net cash and adds to equity value.</div>
+          <div class="field-hint">V3.7.3：Default = Reported / Input Net Debt (preserves V3.7.2 headline IV). Saved into scenarios.</div>
+        </div>
+
+        <!-- V3.7.6 Terminal Value Treatment selector. Default = Current Model
+             which preserves V3.7.5 headline IV. -->
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <span class="field-label">Terminal Value Treatment</span>
+          <select id="p-terminal-treatment" class="dcf-input" style="width:100%;" onchange="recalc()">
+            <option value="current_model_terminal">Current Model Terminal Value</option>
+            <option value="gordon_growth">Gordon Growth Terminal Value</option>
+            <option value="exit_multiple">Exit Multiple Terminal Value</option>
+            <option value="gordon_exit_blend">Gordon / Exit Blend</option>
+            <option value="fade_period_reference">Fade Period Reference Case</option>
+          </select>
+          <div class="field-hint">V3.7.6: pick which terminal-value method drives the DCF headline. Default preserves V3.7.5 IV.</div>
+        </div>
+
+        <!-- V3.7.5 WACC Treatment selector. Default = Selected / Model WACC
+             which preserves V3.7.4 headline IV. -->
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <span class="field-label">WACC Treatment</span>
+          <select id="p-wacc-treatment" class="dcf-input" style="width:100%;" onchange="recalc()">
+            <option value="selected_model_wacc">Selected / Model WACC</option>
+            <option value="capm_indicative_wacc">CAPM Indicative WACC</option>
+            <option value="selected_plus_spread_100bps">Selected WACC + 100 bps</option>
+            <option value="selected_minus_spread_100bps">Selected WACC - 100 bps</option>
+          </select>
+          <div class="field-hint">V3.7.5: pick which WACC drives the DCF headline. CAPM Indicative is a reference case. Default preserves V3.7.4 IV.</div>
+        </div>
+
+        <!-- V3.7.4 Shareholder Returns. Default = Current Reported Diluted
+             Shares which preserves V3.7.3 headline IV. -->
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+          <span class="field-label">Share Count Treatment</span>
+          <select id="p-share-count-treatment" class="dcf-input" style="width:100%;" onchange="recalc()">
+            <option value="current_reported_shares">Current Reported Diluted Shares</option>
+            <option value="forecast_ending_diluted_shares">Forecast Ending Diluted Shares</option>
+            <option value="forecast_weighted_avg_diluted_shares">Forecast Weighted Avg Diluted Shares</option>
+          </select>
+          <div class="field-hint">V3.7.4: pick which forecast share denominator drives per-share IV. Default preserves V3.7.3 IV.</div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">
+            Shareholder Returns (V3.7.4)
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 156px;gap:8px 10px;width:100%;align-items:center;">
+            <span class="field-label">Dividend Payout % NI</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-dividend-payout" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">Buyback % FCF</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-buyback-pct-fcf" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+            <span class="field-label">Annual Dilution %</span>
+            <div class="field-input-group">
+              <input class="dcf-input" type="number" id="p-annual-dilution" step="0.1" onchange="recalc()" />
+              <span class="field-unit">%</span>
+            </div>
+          </div>
+          <div class="field-hint">Leave blank to use historical base values. FCFF is not deducted by these items - only per-share denominator can change via the dropdown above.</div>
+        </div>
+      </div>
+
+      <!-- 财务数据 -->
+      <div class="card">
+        <div class="card-title">财务数据 <span style="color:var(--text-muted);font-size:10px;" id="fin-unit-label">百万</span></div>
+
+        <div class="field-row">
+          <span class="field-label">营业收入 Revenue</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-revenue" step="1" onchange="onMoneyEdit('revenue')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">EBIT</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-ebit" step="1" onchange="onMoneyEdit('ebit')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">D&amp;A 折旧摊销</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-da" step="1" onchange="onMoneyEdit('da')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">CapEx 资本支出</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-capex" step="1" onchange="onMoneyEdit('capex')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">营运资本变化</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-wc-change" step="1" onchange="onMoneyEdit('wc_change')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">有效税率 Tax Rate</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-tax-rate" step="0.1" onchange="recalc()" />
+            <span class="field-unit">%</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">净债务 Net Debt</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-net-debt" step="1" onchange="onMoneyEdit('net_debt')" />
+            <span class="field-unit money-unit">--</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">稀释股本 Shares</span>
+          <div class="field-input-group">
+            <input class="dcf-input" type="number" id="f-shares" step="1" onchange="recalc()" />
+            <span class="field-unit">百万股</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 导出按钮 -->
+      <div class="card" style="padding:22px 26px;">
+        <button class="btn btn-primary" style="width:100%;" onclick="exportExcel()">
+          ⬇ 导出 Excel 模型
+        </button>
+        <div id="scenario-save-row" style="display:none;margin-top:14px;">
+          <button class="btn btn-primary" onclick="saveCurrentScenario()">
+            保存当前情景 / Save Scenario
+          </button>
+          <span id="scenario-save-status" style="font-size:11px;color:var(--text-muted);margin-left:12px;"></span>
+          <button class="btn"
+                  style="display:block;margin-top:12px;background:transparent;border:1px solid var(--red);color:var(--red);font-size:12px;"
+                  onclick="deleteCurrentScenario()">
+            删除当前情景
+          </button>
+        </div>
+        <div style="margin-top:18px;font-size:11px;color:var(--text-muted);line-height:1.6;letter-spacing:0.2px;">
+          💡 首次打开下载的 Excel 时，如果数字显示空白，请点击 Excel 顶部黄色提示条上的<span style="color:var(--gold);font-weight:600;">【启用编辑】</span>——这是 Excel 对网络下载文件的安全保护，启用后所有公式会自动计算。
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ════ 右侧：结果区 ════ -->
+    <div id="results-panel">
+
+      <div class="card intrinsic-card">
+        <div class="intrinsic-label">每股内在价值</div>
+        <div class="intrinsic-value mono" id="r-intrinsic">--</div>
+        <div class="intrinsic-upside" id="r-upside">--</div>
+        <div class="intrinsic-vs" id="r-vs">--</div>
+        <div class="field-warn" id="warn-tv-pct" style="display:none;font-size:12px;margin-top:8px;"></div>
+      </div>
+
+      <div class="card thesis-card" id="thesis-card">
+        <div class="thesis-card-header">
+          <div class="card-title" style="margin:0;border:none;padding:0;">
+            估值情景设置 / Valuation Scenarios
+            <div style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0;text-transform:none;margin-top:4px;">
+              用投资逻辑生成乐观 / 悲观 DCF 预览
+            </div>
+          </div>
+        </div>
+
+        <div class="thesis-card-meta">
+          <span class="thesis-meta-ticker mono" id="thesis-card-ticker">--</span>
+          <span class="thesis-meta-time" id="thesis-card-last-modified">未保存</span>
+        </div>
+
+        <div class="thesis-card-notes" id="thesis-card-notes-preview"></div>
+
+        <div class="thesis-card-drivers" id="thesis-card-drivers"></div>
+
+        <div class="thesis-card-affects" id="thesis-card-affects"></div>
+
+        <div class="thesis-card-actions">
+          <a id="thesis-card-edit-btn" class="btn btn-primary"
+             href="/modeling/case">设置情景 / 预览估值影响</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">FCF 预测与折现</div>
+        <div style="overflow-x:auto;">
+          <table class="fcf-table" id="fcf-table">
+            <thead><tr id="fcf-head"></tr></thead>
+            <tbody id="fcf-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">估值桥接（EV → 每股价值）</div>
+        <table class="bridge-table" id="bridge-table"></table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">WACC Bridge v1</div>
+        <table class="bridge-table" id="wacc-bridge-table"></table>
+        <div class="field-hint">Implied Cost of Equity = rf + beta x erp. Selected WACC is the model WACC input and may differ in this v1 bridge.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Terminal Value Sanity Check v1</div>
+        <table class="bridge-table" id="terminal-sanity-table"></table>
+      </div>
+
+      <div class="card" id="assumption-diff-card" style="display:none;">
+        <div class="card-title">与 Base 相比的关键假设变化</div>
+        <table class="bridge-table" id="assumption-diff-table"></table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">敏感性矩阵 — WACC × 永续增长率 g</div>
+        <div style="overflow-x:auto;">
+          <table class="sensitivity-table" id="sens-gordon"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">敏感性矩阵 — WACC × Exit Multiple</div>
+        <div style="overflow-x:auto;">
+          <table class="sensitivity-table" id="sens-exit"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sensitivity - Revenue Growth x EBIT Margin</div>
+        <div style="overflow-x:auto;">
+          <table class="sensitivity-table" id="sens-operating"></table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<script src="/static/modeling/js/dcf.js"></script>
+<script src="/static/modeling/js/thesis_shared.js"></script>
+<script src="/static/modeling/js/thesis_card.js"></script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+/* style.css — 深色专业风格，含多币种双行显示样式 */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary  : #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary : #21262d;
+  --border      : #30363d;
+  --text-primary: #e6edf3;
+  --text-muted  : #8b949e;
+  --accent      : #388bfd;
+  --red         : #f85149;
+  --green       : #3fb950;
+  --gold        : #d29922;
+  --warn        : #d29922;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mono { font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace; }
+
+/* ── 布局 ────────────────────────────────────────────────── */
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header .logo {
+  font-size: 16px; font-weight: 700;
+  letter-spacing: 2px; color: var(--accent);
+  font-family: "Consolas", monospace;
+}
+
+header .subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── 基准货币切换器（右上角）────────────────────────────── */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modeling-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.modeling-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: "Consolas", monospace;
+  user-select: none;
+}
+
+.modeling-menu > summary::-webkit-details-marker { display: none; }
+.modeling-menu > summary:hover { background-color: rgba(56,139,253,0.1); }
+
+.modeling-menu[open] .modeling-menu-list {
+  display: grid;
+}
+
+.modeling-menu-list {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 20;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+}
+
+.modeling-menu-list a {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 12px;
+  padding: 7px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.modeling-menu-list a:hover {
+  background: var(--bg-tertiary);
+  color: var(--accent);
+}
+
+.fx-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.fx-selector label { letter-spacing: 0.5px; }
+
+.fx-selector select {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: "Consolas", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.fx-selector select:focus { border-color: var(--accent); }
+
+/* fallback 汇率警告图标 */
+.fx-warn {
+  display: none;   /* 默认隐藏，JS 控制显示 */
+  font-size: 13px;
+  color: var(--warn);
+  cursor: help;
+}
+
+main { padding: 20px; }
+
+/* ── 卡片 ───────────────────────────────────────────────── */
+.card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── 组合概览指标 ─────────────────────────────────────────── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.metric {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+
+.metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+
+.metric-value {
+  font-size: 20px; font-weight: 700;
+  font-family: "JetBrains Mono", "Consolas", monospace;
+}
+
+/* 指标标签里的货币标注 */
+.metric-currency {
+  font-size: 10px;
+  color: var(--accent);
+  font-family: "Consolas", monospace;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+/* ── 涨跌颜色 ────────────────────────────────────────────── */
+.up   { color: var(--red);        }
+.down { color: var(--green);      }
+.flat { color: var(--text-muted); }
+
+/* ── 表格 ───────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+thead tr { border-bottom: 1px solid var(--border); }
+
+thead th {
+  padding: 8px 12px; text-align: right;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.8px; color: var(--text-muted); white-space: nowrap;
+}
+
+thead th:first-child { text-align: left; }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.15s;
+  cursor: pointer;
+}
+
+tbody tr:hover { background-color: var(--bg-tertiary); }
+
+tbody td {
+  padding: 10px 12px; text-align: right;
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  white-space: nowrap;
+}
+
+tbody td:first-child { text-align: left; }
+
+.symbol-cell { font-weight: 700; color: var(--accent); font-size: 13px; }
+.name-cell   { font-family: -apple-system, sans-serif; font-size: 12px; color: var(--text-muted); }
+
+/* ── 双行金额显示（主行 + 基准货币副行）─────────────────── */
+.amount-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* 主行：原币种金额，正常大小 */
+.amount-primary {
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+/* 副行：基准货币约值，小号灰色 */
+.amount-secondary {
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+/* 货币代码标签（附在数字后）*/
+.ccy-tag {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 3px;
+  letter-spacing: 0.3px;
+}
+
+/* ── 表单 ───────────────────────────────────────────────── */
+.form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
+
+input[type="text"],
+input[type="number"],
+input[type="date"] {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-family: "Consolas", monospace;
+  font-size: 13px;
+  width: 140px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text-muted); }
+
+/* ── 按钮 ───────────────────────────────────────────────── */
+.btn {
+  padding: 7px 14px; border-radius: 4px; border: none;
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.5px; transition: opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn-primary   { background-color: var(--accent); color: #fff; }
+.btn-danger    { background-color: transparent; border: 1px solid var(--red); color: var(--red); padding: 4px 8px; font-size: 11px; }
+.btn-secondary { background-color: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); }
+
+/* ── 状态提示 ────────────────────────────────────────────── */
+.loading  { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 13px; letter-spacing: 1px; }
+.error-msg { color: var(--red); font-size: 12px; margin-top: 6px; }
+
+/* ── 详情页 ──────────────────────────────────────────────── */
+.back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 13px; margin-bottom: 16px; }
+.back-btn:hover { text-decoration: underline; }
+
+.detail-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 20px; }
+.detail-symbol { font-size: 28px; font-weight: 800; font-family: "Consolas", monospace; color: var(--accent); }
+.detail-name   { font-size: 16px; color: var(--text-muted); }
+.detail-price  { font-size: 36px; font-weight: 700; font-family: "Consolas", monospace; }
+.detail-change { font-size: 18px; font-family: "Consolas", monospace; }
+
+.key-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+
+.stat-item { background-color: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+.stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+.stat-value { font-size: 16px; font-weight: 600; font-family: "Consolas", monospace; margin-top: 2px; }
+
+/* ── 图表容器 ────────────────────────────────────────────── */
+.chart-container { position: relative; height: 320px; width: 100%; }
+.pie-container   { position: relative; height: 260px; width: 100%; }
+
+/* ── 饼图图例 ─────────────────────────────────────────────── */
+#pie-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.legend-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── 响应式 ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row     { flex-direction: column; }
+  input[type="text"], input[type="number"], input[type="date"] { width: 100%; }
+}

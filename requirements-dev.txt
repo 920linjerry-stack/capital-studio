@@ -1,0 +1,9 @@
+# Development / test dependencies.
+# Installs the runtime requirements plus the test toolchain.
+#
+#   pip install -r requirements-dev.txt
+#   pytest
+
+-r requirements.txt
+
+pytest>=8.0
