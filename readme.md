@@ -23,6 +23,8 @@ A local-first financial modeling and M&A strategy lab — DCF, formula-native LB
 ### 1. Equity / DCF Dashboard（股票与 DCF 估值看板）
 - 组合概览、持仓盈亏、多币种（HKD / USD / CNY）、个股详情与历史行情。
 - 完整的 **DCF（Discounted Cash Flow）** 估值器：假设驱动的现金流预测、Bull / Bear
+- 导出的 Excel 工作簿是 **formula-native**（公式原生）：单元格里是**活公式**而非写死的
+  数值，可在 Excel 中直接联动重算。
   情景管理、敏感性分析、数据质量审计，以及 **Excel 导出**。
 
 ### 2. Formula-native LBO Workbook（公式原生 LBO 工作簿）
