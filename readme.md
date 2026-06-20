@@ -40,7 +40,7 @@ A local-first financial modeling and M&A strategy lab — DCF, formula-native LB
 - **完全确定性（deterministic）**：seed / precompute 逻辑，相同输入恒得相同输出，
   **不依赖 LLM / 插件 / broker API**。
 
-### 4. V6 Market Intelligence（组合感知市场情报 / 事件影响引擎）
+### 4. Market Intelligence（组合感知市场情报 / 事件影响引擎）
 - 把宏观、公司公告、分析师观点与情绪类事件表示为结构化记录，映射到你已有的持仓，
   解释事件可能从哪些路径影响组合、方向如何。
 - **确定性、非 LLM**：分类、匹配、评分、文案全部基于规则，相同输入恒得相同输出。
@@ -48,9 +48,9 @@ A local-first financial modeling and M&A strategy lab — DCF, formula-native LB
 
 ---
 
-## V6 Market Intelligence｜市场情报引擎
+## Market Intelligence｜市场情报引擎
 
-V6 是一个**确定性、非 LLM** 的「组合感知市场情报模块」（Market Intelligence
+这是一个**确定性、非 LLM** 的「组合感知市场情报模块」（Market Intelligence
 Cockpit）。它把宏观、公司公告、分析师观点与情绪类事件表示为结构化记录，映射到你
 已有的持仓上，回答「今天的事件可能从哪些路径影响我的组合、方向如何」。
 
