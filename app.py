@@ -61,6 +61,7 @@ from modeling.lbo_return_context import build_return_context
 from modeling.ma.api import build_ma_response
 from modeling.ma.sample_companies import list_sample_companies
 from modeling.ma.precompute import get_arena_pairs_response
+from modeling.v6.api import build_intelligence_response
 
 # v3.3.0 段 1 的工具函数（本段段 2 复用）
 from thesis_utils import canonical_ticker
@@ -533,6 +534,14 @@ def modeling_ma_arena_match_play():
     Opponent. No Overall Score, no backend per-user state, no runtime
     network/LLM/plugin."""
     return send_from_directory("static/modeling", "arena_match.html")
+
+
+@app.route("/modeling/v6")
+def modeling_v6():
+    """V6 Market Intelligence cockpit: deterministic, rule-based event→holdings
+    impact mapping. Static shell; all data comes from
+    /api/modeling/v6/intelligence."""
+    return send_from_directory("static/modeling", "v6.html")
 
 
 # ── API：持仓管理（PT 部分，使用 router 后行情更稳）────────────────────────
@@ -2838,6 +2847,64 @@ def api_ma_calculate():
                 "message": "M&A calculation is temporarily unavailable.",
             }],
         })), 500
+
+
+def _v6_market_values(holdings: list, base_currency: str) -> list:
+    """Best-effort market-value enrichment for V6 weighting.
+
+    Reuses the same quote router + FX conversion as the portfolio view to attach
+    ``market_value_base`` to each row so V6 can weight by market value. Any
+    quote/FX failure is swallowed and the row is left untouched, so the V6
+    engine falls back to its deterministic cost-basis weighting
+    (cost_price * quantity). Never raises, never touches the on-disk store.
+    """
+    enriched = []
+    for h in holdings:
+        row = dict(h)
+        symbol = str(h.get("symbol") or h.get("ticker") or "").strip()
+        qty = h.get("quantity")
+        if symbol and isinstance(qty, (int, float)) and qty > 0:
+            try:
+                quote = get_quote_router(symbol)
+                if isinstance(quote, dict):
+                    price = quote.get("current_price")
+                    currency = quote.get("currency", "USD")
+                    if price is not None:
+                        mv_native = float(price) * float(qty)
+                        mv_base, _fx = convert_to_base(mv_native, currency, base_currency)
+                        if mv_base is not None:
+                            row["market_value_base"] = mv_base
+            except Exception:
+                app.logger.exception("v6 market-value lookup failed for %s", symbol)
+        enriched.append(row)
+    return enriched
+
+
+@app.route("/api/modeling/v6/intelligence", methods=["GET"])
+def api_modeling_v6_intelligence():
+    """V6 Market Intelligence: deterministic event→holdings impact mapping.
+
+    Loads the user's portfolio via the existing loader; when none exists it
+    falls back to the engine's bundled synthetic sample (not the on-disk store),
+    flagged as demo so the UI labels it. On any unexpected failure it logs the
+    details server-side and returns a fixed public message only.
+    """
+    try:
+        base_currency = request.args.get("base", "HKD").upper()
+        if base_currency not in VALID_CURRENCIES:
+            base_currency = "HKD"
+        holdings = load_portfolio()
+        portfolio_is_demo = not holdings
+        if holdings:
+            holdings = _v6_market_values(holdings, base_currency)
+        payload = build_intelligence_response(
+            holdings=holdings or None,
+            portfolio_is_demo=portfolio_is_demo,
+        )
+        return jsonify(_clean_nan(payload))
+    except Exception:
+        app.logger.exception("api_modeling_v6_intelligence failed")
+        return jsonify({"error": "Unable to build V6 intelligence response."}), 500
 
 
 @app.route("/api/modeling/dcf", methods=["POST"])

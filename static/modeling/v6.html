@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>V6 市场情报雷达 · Market Intelligence</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .v6-wrap { max-width: 1480px; margin: 0 auto; padding: 0 20px 70px; }
+
+    /* ── toolbar ─────────────────────────────────────────── */
+    .v6-topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:18px 0 12px; }
+    .v6-title { font-size:21px; font-weight:800; letter-spacing:.5px; }
+    .v6-title .v6-kicker { display:inline-block; font-family:"Consolas",monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:var(--gold); border:1px solid rgba(210,153,34,.6); border-radius:999px; padding:2px 8px; margin-right:8px; vertical-align:middle; }
+    .v6-sub { font-size:12px; color:var(--text-muted); margin-top:3px; max-width:720px; line-height:1.6; }
+    .v6-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .v6-btn { font-size:12px; color:var(--accent); text-decoration:none; border:1px solid var(--accent); border-radius:4px; padding:5px 11px; font-family:"Consolas",monospace; background:transparent; cursor:pointer; white-space:nowrap; }
+    .v6-btn:hover { background:rgba(56,139,253,.12); }
+    .v6-btn.active { background:var(--accent); color:#0d1117; font-weight:700; }
+    .v6-btn.ghost { color:var(--text-muted); border-color:var(--border); }
+    .v6-btn.ghost:hover { color:var(--text-primary); border-color:var(--text-muted); }
+
+    .v6-selector { display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 12px; align-items:center; }
+    .v6-selector .lbl { font-size:11px; color:var(--text-muted); margin-right:4px; }
+
+    /* ── notices ─────────────────────────────────────────── */
+    .v6-notice { display:flex; gap:10px; align-items:flex-start; border-radius:6px; padding:9px 14px; font-size:12px; margin-bottom:9px; line-height:1.55; }
+    .v6-notice .ic { font-size:14px; flex-shrink:0; }
+    .v6-notice.mock { border:1px solid var(--gold); background:rgba(210,153,34,.10); color:#e8c97a; }
+    .v6-notice.advice { border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-muted); }
+
+    /* ── cards / grid ────────────────────────────────────── */
+    .card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; padding:16px 18px; }
+    .card-title { font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:12px; letter-spacing:.4px; text-transform:none; }
+    .v6-section-title { font-size:14px; font-weight:800; margin:26px 0 13px; letter-spacing:.4px; display:flex; align-items:center; gap:10px; }
+    .v6-section-title .cnt { font-size:11px; color:var(--text-muted); font-weight:600; }
+
+    /* ── collapsible secondary sections (progressive disclosure) ──────── */
+    .v6-collapse { border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); margin-bottom:10px; }
+    .v6-collapse > summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:13px 16px; user-select:none; }
+    .v6-collapse > summary::-webkit-details-marker { display:none; }
+    .v6-collapse > summary:hover { background:var(--bg-tertiary); border-radius:8px; }
+    .v6-collapse[open] > summary { border-bottom:1px solid var(--border); border-radius:8px 8px 0 0; }
+    .v6-sec-h { font-size:13.5px; font-weight:700; }
+    .v6-sec-hint { font-size:11px; color:var(--text-muted); }
+    .v6-sec-caret { margin-left:auto; color:var(--text-muted); transition:transform .15s; }
+    .v6-collapse[open] .v6-sec-caret { transform:rotate(90deg); }
+    .v6-sec-body { padding:14px 16px; }
+    .v6-sec-body > .card { background:var(--bg-primary); }
+    .v6-feed-count { font-size:11px; color:var(--text-muted); margin-bottom:8px; }
+    .v6-method { font-size:11.5px; color:var(--text-muted); line-height:1.85; }
+
+    /* ── status bar ──────────────────────────────────────── */
+    .v6-statusbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11.5px; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:8px 14px; margin-bottom:12px; }
+    .v6-statusbar b { color:var(--text-primary); font-family:"Consolas",monospace; }
+    .v6-statusbar .sep { opacity:.4; }
+    .v6-statusbar .nadv { margin-left:auto; color:var(--gold); border:1px solid rgba(210,153,34,.4); border-radius:999px; padding:1px 10px; font-size:10.5px; }
+
+    .v6-matrix-head { display:grid; grid-template-columns:1.7fr .7fr .6fr .9fr 1.4fr 26px; gap:12px; padding:6px 16px; font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+    @media (max-width:880px){ .v6-matrix-head{ display:none; } }
+    .v6-keyline { display:flex; gap:18px; flex-wrap:wrap; font-size:11.5px; color:var(--text-muted); margin-bottom:8px; }
+    .v6-tags { font-size:11px; color:var(--text-muted); margin-bottom:12px; display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+
+    /* ── hero summary ────────────────────────────────────── */
+    .v6-hero { display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:14px; margin-bottom:14px; }
+    @media (max-width:760px){ .v6-hero{ grid-template-columns:1fr; } }
+    .v6-hero-main { background:linear-gradient(135deg, rgba(56,139,253,.10), rgba(56,139,253,.02)); border:1px solid var(--border); border-radius:10px; padding:18px 20px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+    .v6-hero-score { font-size:46px; font-weight:800; font-family:"Consolas",monospace; line-height:1; }
+    .v6-hero-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    @media (max-width:520px){ .v6-hero-stats{ grid-template-columns:1fr; } }
+    .v6-hero-stat { background:var(--bg-secondary); border:1px solid var(--border); border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; justify-content:center; }
+    .v6-hero-stat .hs-v { font-size:26px; font-weight:700; font-family:"Consolas",monospace; }
+    .hs-l { font-size:11px; color:var(--text-muted); letter-spacing:.3px; }
+    .v6-hero-stat .hs-l { margin-top:5px; }
+    .hs-s { font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.5; }
+
+    /* ── narrative + themes ──────────────────────────────── */
+    .v6-narrative { background:linear-gradient(135deg, rgba(56,139,253,.10), rgba(56,139,253,.02)); border:1px solid rgba(56,139,253,.35); border-radius:8px; padding:13px 16px; font-size:13px; line-height:1.75; color:var(--text-primary); margin-bottom:14px; }
+    .v6-narr-tag { display:inline-block; font-family:"Consolas",monospace; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--accent); border:1px solid rgba(56,139,253,.5); border-radius:999px; padding:1px 9px; margin-right:10px; vertical-align:middle; }
+    .v6-themes { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:8px; }
+    .v6-theme { display:flex; align-items:center; gap:8px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:9px 12px; font-size:12.5px; }
+    .v6-theme .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .v6-theme .tn { font-weight:600; }
+    .v6-theme .tc { color:var(--text-muted); font-size:11px; margin-left:auto; }
+
+    /* ── heatmap ─────────────────────────────────────────── */
+    .v6-heatmap { width:100%; border-collapse:collapse; font-size:12px; min-width:480px; }
+    .v6-heatmap th { text-align:center; font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; padding:6px 10px; border-bottom:1px solid var(--border); }
+    .v6-heatmap th:first-child, .v6-heatmap td:first-child { text-align:left; }
+    .v6-heatmap td { text-align:center; padding:7px 10px; border-bottom:1px solid var(--border); }
+    .v6-heatmap .hm-tk { font-weight:600; white-space:nowrap; }
+    .v6-heatmap tr:last-child td { border-bottom:none; }
+    .v6-heatmap .hm-click { cursor:pointer; }
+    .v6-heatmap .hm-click:hover { outline:1px solid var(--accent); outline-offset:-1px; }
+    .v6-heatmap .hm-active { outline:2px solid var(--accent); outline-offset:-2px; }
+    .v6-drill { margin-top:12px; border-top:1px solid var(--border); padding-top:12px; }
+    .v6-drill-h { font-size:12.5px; font-weight:700; margin-bottom:9px; display:flex; align-items:center; gap:10px; }
+    .v6-drill-x { margin-left:auto; font-size:11px; font-weight:400; color:var(--text-muted); cursor:pointer; border:1px solid var(--border); border-radius:4px; padding:2px 8px; }
+    .v6-drill-x:hover { color:var(--text-primary); border-color:var(--text-muted); }
+
+    .v6-summary { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:6px; }
+    @media (max-width:1000px){ .v6-summary{ grid-template-columns:repeat(2,1fr);} }
+    .v6-metric-big { font-size:34px; font-weight:800; font-family:"Consolas",monospace; line-height:1.1; }
+    .v6-metric-sm { font-size:20px; font-weight:700; font-family:"Consolas",monospace; }
+    .v6-metric-cap { font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.5; }
+
+    /* ── badges ──────────────────────────────────────────── */
+    .badge { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.3px; padding:2px 9px; border-radius:999px; font-family:"Consolas",monospace; border:1px solid transparent; }
+    .badge.bullish { color:var(--green); background:rgba(63,185,80,.12); border-color:rgba(63,185,80,.5); }
+    .badge.bearish { color:var(--red); background:rgba(248,81,73,.12); border-color:rgba(248,81,73,.5); }
+    .badge.mixed { color:var(--gold); background:rgba(210,153,34,.12); border-color:rgba(210,153,34,.5); }
+    .badge.neutral { color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border); }
+    .badge.uncertain { color:#a371f7; background:rgba(163,113,247,.12); border-color:rgba(163,113,247,.5); }
+    .badge.mode-live { color:var(--green); background:rgba(63,185,80,.12); border-color:rgba(63,185,80,.5); }
+    .badge.mode-live-partial { color:var(--gold); background:rgba(210,153,34,.12); border-color:rgba(210,153,34,.5); }
+    .badge.mode-fixture { color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border); }
+    .badge.mode-unavailable, .badge.mode-error { color:var(--red); background:rgba(248,81,73,.10); border-color:rgba(248,81,73,.4); }
+    .badge.phase { font-size:10px; padding:1px 7px; }
+    .badge.phase-anticipation { color:var(--gold); border-color:rgba(210,153,34,.5); background:rgba(210,153,34,.10); }
+    .badge.phase-upcoming { color:var(--text-muted); border-color:var(--border); background:var(--bg-tertiary); }
+    .badge.phase-live { color:var(--accent); border-color:rgba(56,139,253,.5); background:rgba(56,139,253,.10); }
+    .badge.phase-post_event { color:#a371f7; border-color:rgba(163,113,247,.4); background:rgba(163,113,247,.10); }
+    .badge.phase-expired { color:var(--text-muted); border-color:var(--border); background:transparent; opacity:.7; }
+    .badge.tiny { font-size:9.5px; padding:1px 6px; color:var(--text-muted); border-color:var(--border); background:var(--bg-tertiary); }
+
+    /* ── driver cards ────────────────────────────────────── */
+    .v6-drivers-grid { display:grid; grid-template-columns:1fr 1fr 1.4fr; gap:12px; }
+    @media (max-width:1000px){ .v6-drivers-grid{ grid-template-columns:1fr;} }
+    .v6-chip-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .v6-chip-row:last-child { border-bottom:none; }
+    .v6-num { font-family:"Consolas",monospace; }
+    .pos { color:var(--green); } .neg { color:var(--red); } .mut { color:var(--text-muted); }
+    .v6-driver { display:flex; gap:9px; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+    .v6-driver:last-child { border-bottom:none; }
+    .v6-driver .et { font-family:"Consolas",monospace; font-size:10px; color:var(--text-muted); border:1px solid var(--border); border-radius:4px; padding:1px 6px; flex-shrink:0; }
+    .v6-driver .ttl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* ── future timeline ─────────────────────────────────── */
+    .v6-timeline { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:10px; }
+    .v6-cat { border:1px solid var(--border); border-radius:8px; padding:12px 14px; background:var(--bg-secondary); position:relative; }
+    .v6-cat .cd { font-size:26px; font-weight:800; font-family:"Consolas",monospace; }
+    .v6-cat .cd small { font-size:12px; color:var(--text-muted); font-weight:600; }
+    .v6-cat .cat-ttl { font-size:12.5px; font-weight:600; margin:6px 0; line-height:1.4; }
+    .v6-cat .cat-meta { font-size:10.5px; color:var(--text-muted); font-family:"Consolas",monospace; }
+    .v6-cat .cat-hits { font-size:11px; color:var(--text-muted); margin-top:6px; }
+    .v6-cat .cat-risk { font-size:11px; color:var(--gold); margin-top:5px; }
+
+    /* ── holdings list ───────────────────────────────────── */
+    .v6-holding { background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; margin-bottom:9px; overflow:hidden; }
+    .v6-holding-head { display:grid; grid-template-columns:1.7fr .7fr .6fr .9fr 1.4fr 26px; gap:12px; align-items:center; padding:13px 16px; cursor:pointer; }
+    .v6-holding-head:hover { background:var(--bg-tertiary); }
+    @media (max-width:880px){ .v6-holding-head{ grid-template-columns:1.5fr 1fr 24px;} .v6-col-hide{ display:none;} }
+    .v6-tk { font-weight:700; font-size:14px; }
+    .v6-nm { font-size:11px; color:var(--text-muted); margin-top:1px; }
+    .v6-col-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:2px; }
+    .v6-caret { transition:transform .15s; color:var(--text-muted); text-align:center; }
+    .v6-holding.open .v6-caret { transform:rotate(90deg); }
+    .v6-driver-mini { font-size:11px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    .v6-detail { display:none; border-top:1px solid var(--border); padding:15px 16px; background:var(--bg-primary); }
+    .v6-holding.open .v6-detail { display:block; }
+    .v6-concl { font-size:12.5px; color:var(--text-primary); background:var(--bg-tertiary); border-left:3px solid var(--accent); padding:9px 12px; border-radius:4px; margin-bottom:14px; line-height:1.6; }
+    .v6-channel { margin-bottom:13px; }
+    .v6-channel-h { font-size:12px; font-weight:700; margin-bottom:7px; display:flex; gap:8px; align-items:center; }
+    .v6-channel-h .dot { width:8px; height:8px; border-radius:50%; }
+    .dot.direct{ background:var(--accent);} .dot.second{ background:var(--gold);} .dot.reflex{ background:#a371f7;}
+    .v6-evt { border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:7px; }
+    .v6-evt-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    .v6-evt-title { font-size:12.5px; font-weight:600; line-height:1.4; }
+    .v6-evt-meta { font-size:10px; color:var(--text-muted); font-family:"Consolas",monospace; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .v6-evt-exp { font-size:11.5px; color:var(--text-muted); margin-top:7px; line-height:1.6; }
+    .v6-empty { font-size:12px; color:var(--text-muted); padding:6px 0; }
+    .v6-loading { text-align:center; color:var(--text-muted); padding:50px 0; font-size:13px; }
+
+    /* ── event feed ──────────────────────────────────────── */
+    .v6-feed-ctl { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:10px; font-size:11px; color:var(--text-muted); align-items:center; }
+    .v6-feed-ctl > span { display:inline-flex; gap:4px; align-items:center; flex-wrap:wrap; }
+    .v6-feed-ctl .v6-btn { padding:3px 8px; font-size:11px; }
+    .v6-feed-row { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); }
+    .v6-feed-row:last-child { border-bottom:none; }
+    .v6-feed-ttl { font-size:13px; line-height:1.45; }
+    .v6-feed-meta { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .v6-feed-tk { font-size:10.5px; color:var(--text-muted); font-family:"Consolas",monospace; margin-top:2px; }
+    .v6-feed-right { text-align:right; flex-shrink:0; min-width:72px; }
+    .v6-feed-right .rel { font-size:14px; font-weight:700; }
+    .v6-feed-right .rl { font-size:10px; color:var(--text-muted); margin-top:1px; }
+
+    .v6-sources { display:flex; gap:8px; flex-wrap:wrap; }
+    .v6-source { border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-size:11.5px; background:var(--bg-secondary); }
+    .v6-source .sn { font-weight:600; }
+    .v6-foot { font-size:11px; color:var(--text-muted); margin-top:26px; line-height:1.7; border-top:1px solid var(--border); padding-top:14px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">▸ V6 MARKET INTELLIGENCE</div>
+    <div class="subtitle">组合感知的事件影响引擎 · 规则驱动 / 非 LLM</div>
+  </div>
+  <div class="header-right">
+    <a href="/" class="v6-btn">← 返回 Portfolio Tracker</a>
+  </div>
+</header>
+
+<main class="v6-wrap">
+
+  <div class="v6-topbar">
+    <div>
+      <div class="v6-title"><span class="v6-kicker">V6</span>市场情报雷达</div>
+      <div class="v6-sub">把宏观、市场情绪、机构观点、公司与官方事件结构化，映射到你的持仓，按 直接影响 · 二次传导 · 反身性/情绪 三条通道解读，并对未来催化事件做倒计时与预期定价。</div>
+    </div>
+    <div class="v6-actions">
+      <button class="v6-btn ghost" id="btn-sources" onclick="toggleSourceFeed()" title="合并公开来源（fixture 模式）">合并来源</button>
+      <button class="v6-btn ghost" onclick="load()">↻ 刷新</button>
+    </div>
+  </div>
+
+  <div class="v6-selector" id="selector"></div>
+
+  <div class="v6-notice mock" id="mock-notice" style="display:none;">
+    <span class="ic">⚠</span><span id="mock-text"></span>
+  </div>
+  <div class="v6-notice advice" id="stale-notice" style="display:none;border-color:rgba(210,153,34,.4);">
+    <span class="ic">◷</span><span id="stale-text"></span>
+  </div>
+  <div class="v6-notice advice" id="advice-notice">
+    <span class="ic">ℹ</span><span id="advice-text">本视图仅为事件—持仓影响方向的解读，不构成投资建议，不提供买入/卖出信号、目标价或止损位。</span>
+  </div>
+
+  <div id="v6-body">
+    <div class="v6-loading" id="v6-loading">正在计算组合事件影响…</div>
+  </div>
+
+  <div class="v6-foot" id="v6-foot" style="display:none;">
+    引擎：确定性规则匹配（非 LLM）。事件经关键词分类器打标，按「持仓权重 × 方向 × 强度 × 相关性 × 置信度 × 时间权重」计分并聚合；未来事件按预期定价提前计入、事件后按半衰期衰减，并识别「利好出尽」风险。公开来源适配器（Yahoo / Google News / SEC EDGAR / 宏观日历 / 机构标题）默认以示例 fixture 运行，可在真实联网时切换为公开实时源；每个来源都会如实标注 live / fixture / 不可用 状态。
+  </div>
+
+</main>
+
+<script src="/static/modeling/js/v6.js"></script>
+</body>
+</html>
