@@ -1,340 +1,188 @@
-# V6 — Market Intelligence / Portfolio-Aware Event Engine
+# V6 · 组合感知市场情报模块（Market Intelligence Cockpit）
 
-V6 is a **deterministic, non-LLM, portfolio-aware market intelligence engine**.
-It represents macro / sentiment / institutional / official / company events as
-structured records, maps them onto the holdings already tracked by the Portfolio
-Tracker, and explains the likely impact through three transmission channels:
+V6 是一个**确定性、非 LLM 的「组合感知市场情报模块」**（Market Intelligence
+Cockpit）。它把宏观、公司、机构、官方与情绪类事件表示为结构化记录，映射到组合
+跟踪器（Portfolio Tracker）中已有的持仓上，并用透明的规则解释「今天的事件对我的
+持仓意味着什么」——方向、传导路径，以及一段自然语言说明。
 
-1. **Direct impact** — company-specific news, or the holding's own factor
-   reaction to a macro move (signed sensitivity) and thematic factor overlap.
-2. **Second-order transmission** — the event reaches the holding through a
-   supplier / customer / sector-beta chain rather than direct company news.
-3. **Reflexivity / sentiment** — positioning and risk-on/risk-off feedback
-   loops, scaled by each holding's reflexivity exposure.
-
-It classifies effects as **bullish / bearish / neutral / mixed / uncertain**. It
-**does not** give buy/sell instructions, target prices, stop-losses, or
-automated trading recommendations.
+相同输入永远得到相同输出：分类、匹配、打分、文案全部基于规则，`modeling/v6/`
+内不依赖任何 OpenAI / Anthropic / Gemini / 本地大模型。
 
 ---
 
-## Product goal
+## 功能定位
 
-Let a user enter from the Portfolio Tracker, see their holdings in an intuitive,
-impact-ranked list, expand any holding, and understand *why* today's events
-matter for it — direction, channel, and a plain-language explanation — without
-ever being told what to trade.
+让使用者从组合跟踪器进入，看到一份按「对本组合的影响强度」排序的持仓列表，展开
+任意持仓后理解事件如何作用于它：
 
----
+- **方向判断**：偏利好 / 偏利空 / 中性 / 多空分歧 / 不确定。
+- **传导路径**：直接影响 / 二次传导 / 反身性·情绪 / 未来事件。
+- **可审计的解释**：固定模板文案，由结构化字段填充，便于复核。
 
-## Non-LLM design
-
-Everything is rule-based and deterministic. Equal inputs always produce equal
-outputs.
-
-- **Classifier**: ordered keyword/phrase rules with word-boundary matching.
-- **Matching**: set intersections over tickers, aliases, sectors, and exposure
-  tags.
-- **Scoring**: one transparent arithmetic formula (below).
-- **Explanations**: fixed string templates filled from structured fields.
-
-There is **no** OpenAI / Anthropic / Gemini / local-model dependency anywhere in
-`modeling/v6/`. A test (`tests/test_v6_boundaries.py::test_v6_package_imports_no_llm_client`)
-statically asserts no LLM SDK token appears in the package source.
+核心目标是「解释为什么」，而不是替使用者决定怎么做。
 
 ---
 
-## Architecture
+## 非荐股边界
 
-Pure calculation logic is separated from the UI, mirroring the existing
-`modeling/ma/` package.
+V6 的全部输出都是**解释性**的：它只说明事件对持仓的潜在影响方向与传导路径。
 
-```
-modeling/v6/
-  schemas.py        # MarketEvent (+future fields), HoldingExposure dataclasses
-  exposure.py       # curated exposure registry + portfolio adapter + demo sets
-  fixtures.py       # curated sample events (recent + scheduled future catalysts)
-  classifier.py     # deterministic keyword/rule event classifier
-  timing.py         # future-event phase / countdown / anticipation / decay
-  dedupe.py         # deterministic multi-feed event de-duplication
-  impact_engine.py  # matching, scoring, temporal-weighted aggregation (the core)
-  templates.py      # Chinese template explanations + banned-phrase guard
-  api.py            # thin, pure UI-facing payload builder
-  sources/          # public, keyless source adapters (see below)
-    base.py         #   HTTP + RSS/Atom parser + RawItem/FetchResult + raw_to_event
-    adapters.py     #   Yahoo / Google News / SEC EDGAR / FRED / analyst adapters
-    registry.py     #   orchestration, failure isolation, TTL cache, status rollup
-  README.md         # this document
-static/modeling/v6.html        # Chinese cockpit page (dashboard dark theme)
-static/modeling/js/v6.js       # read-only rendering of the payload
-tests/test_v6_*.py             # classifier/engine/boundary/timing/dedupe/sources/cn
-```
-
-Flask wiring (in `app.py`):
-
-- `GET /modeling/v6` — serves the page.
-- `GET /api/modeling/v6/intelligence` — returns the intelligence payload.
-  Reuses application-provided holdings with cost-basis weighting (no live
-  quote fetch, so it runs fully offline by default). Query params:
-  - `?demo=<id>` — use a named demo portfolio (`sample`, `us_megacap_tech`,
-    `leveraged_growth`, `balanced`, `ai_semis`); `?demo=1` ≙ `sample`.
-  - `?sources=1` — merge the public-source feed in **fixture** mode (badges).
-  - `?live=1` — best-effort **live** fetch from the keyless public sources.
-- A V6 entry banner is added to the Portfolio Tracker page (`static/index.html`).
+- 本模块**不构成投资建议**。
+- 它**不**给出可照搬执行的操作指令，**不**设定价位目标，**不**设定风险触发位，
+  也**不**输出可直接照单执行的操作信号。
+- 每一份 API 响应都带有 `boundaries` 区块；页面常驻显示「非投资建议 / 无买卖
+  信号」提示。
+- 生成的结论会经过 `templates.BANNED_PHRASES` 文案护栏过滤；以引号原样转述的
+  来源标题属于「被报道的数据」，不在无操作指令保证的覆盖范围内。
 
 ---
 
-## Schemas
+## 数据源模式
 
-### `MarketEvent`
+数据源采用公开、**免密钥**的适配器，彼此隔离运行：任一来源失败都不会拖垮整页。
+每个来源都如实标注自己的模式，并汇总成一个 `sources_overall_mode`。网络默认
+**关闭**（示例模式，瞬时返回），可显式开启尽力而为的实时抓取。
 
-| field | meaning |
+| 模式 | 含义 |
 |---|---|
-| `event_id` | stable id |
-| `title` | headline |
-| `source` / `source_type` | provenance; `source_type` ∈ macro/sentiment/institutional/official/company |
-| `timestamp` | ISO-8601 string |
-| `event_type` | one of the classifier types (e.g. `rate_cut`, `earnings_beat`) |
-| `direction` | broad direction: `+1` bullish, `-1` bearish, `0` neutral |
-| `magnitude` | event strength `1..5` |
-| `confidence` | reliability `0..1` |
-| `affected_tags` | exposure tags the event hits (e.g. `rates`, `ai_capex`) |
-| `related_tickers` | direct tickers |
-| `decay_hours` | half-life for time-decay (`0` = none, used by fixtures) |
-| `summary` | short note / body |
+| **实时公共源** | 具备从公开、免密钥来源实时抓取的能力 |
+| **示例回退** | 离线默认状态，使用内置示例事件（`fixtures.py`） |
+| **未接实时源** | 该来源没有可用的公开免密钥实时通道（如需密钥的日历、付费研报） |
+| **部分实时** | 部分来源实时成功、部分回退到示例 |
+| **实时正常** | 已启用的来源全部实时抓取成功 |
+| **错误** | 抓取过程中发生异常，已被隔离并降级 |
 
-### `HoldingExposure`
+API 还在响应顶层用 `data_mode` 标注整体「真实度」：`sample`（示例组合）/
+`sample-events`（真实持仓 + 示例事件）/ `live`（真实持仓 + 实时事件）。页面会据此
+渲染明确的「示例数据」标识。
 
-The reusable, **non-private** fingerprint of a holding (no cost/quantity/P&L).
+适配器一览：
 
-| field | meaning |
-|---|---|
-| `ticker` / `name` / `aliases` | identity + match terms |
-| `sector` / `asset_type` | classification |
-| `factor_tags` | thematic exposure (e.g. `growth`, `semiconductors`) |
-| `macro_sensitivity` | tag → deterministic signed factor exposure (see below) |
-| `second_order_exposure` | transmission tags (supplier/customer/sector beta) |
-| `reflexivity_exposure` | `0..1` sentiment-feedback sensitivity |
-
-**Sign convention for `macro_sensitivity` (important):** legacy broad tags such
-as `rates` and `yields` remain betas against the event's broad direction. A
-second vocabulary of explicit factor states (`oil_up`, `commodity_inflation`,
-`inflation_fear`, `risk_off`, `real_yields_up`, `dollar_up`, `credit_stress`,
-and `yield_curve_steepening`) uses the sensitivity sign directly as the
-holding-specific reaction. This lets one macro event be positive for an oil
-beneficiary, negative for high-duration growth, or mixed for gold without
-changing the event's broad market direction. Conflicting factor states remain
-separate contributions rather than being averaged away.
-
----
-
-## Rule engine
-
-`impact_engine.match_event_to_holding` attributes an event to a holding through
-the channels above. Each matched tag is counted in **exactly one** channel
-(direct > second-order) so impact is never double-counted; the reserved tag
-`risk_sentiment` always routes to the reflexivity channel.
-
-Scoring (`score_contribution`), applied per channel contribution:
-
-```
-impact = position_weight
-       × effective_direction      # +1 / -1 / 0
-       × magnitude                # raw 1..5
-       × relevance                # 0..1 (channel- and beta-dependent)
-       × confidence               # 0..1
-       × decay_factor             # 1.0 for fixtures; half-life hook otherwise
-```
-
-Aggregation (`analyze_holding`, `analyze_portfolio`):
-
-- Sum positive and negative impacts; `net = pos − |neg|`, `gross = pos + |neg|`.
-- **Status**: if both sides are material (each ≥ 30% of gross) → `mixed`;
-  else `bullish` / `bearish` by net sign, or `neutral`. A non-mixed read whose
-  contributing events average `confidence < 0.4` is reported as `uncertain`.
-- Portfolio status uses the same logic over all contributions; weighting
-  metadata (`cost-basis` / `equal-weight` fallback / `is_sample`) is surfaced.
-
-If a holding has no curated profile it gets a neutral generic fingerprint
-(flagged `matched_profile: false`) so it is never silently dropped.
-
----
-
-## Data boundary
-
-- **No** LLM API, **no** brokerage API, **no** live/paid data sources, **no**
-  real secrets, **no** committed private portfolio data.
-- Events are currently the bundled **sample fixtures** (`fixtures.py`). The API
-  marks this with `data_mode` (`sample` / `sample-events` / `live`) and the UI
-  renders an explicit "sample data" notice.
-- Every payload carries a `boundaries` block and the UI shows a persistent
-  "not investment advice / no buy-sell signal" notice.
-- Generated explanations/conclusions are scanned against
-  `templates.BANNED_PHRASES`; echoed source headlines (in quotes) are excluded
-  from the no-instruction guarantee because they are reported data, not advice.
-
----
-
-## Mock fixtures vs. future real-source adapters
-
-The bundled fixtures demonstrate every channel: a bullish and a bearish direct
-company event, a macro event hitting growth/tech, a second-order transmission
-event, a reflexivity/sentiment event, and conflicting events that aggregate to
-`mixed`.
-
-The seam for real data is intentionally clean:
-
-- `classifier.recognize_text` first collects every structured state in a
-  headline; `assign_direction` then sets a broad sign only when evidence is
-  one-sided. `classify_text` / `classify_event` expose the compatible combined
-  path. States, conflict flags, and classification confidence remain attached
-  to each `MarketEvent` for deterministic audit.
-- `api.build_intelligence_response(holdings, events, event_source=...)` accepts a
-  caller-supplied event list and an `event_source` label; wiring a real public
-  feed means building that list and passing `event_source="live"`.
-- `exposure.build_portfolio` already accepts live Portfolio Tracker rows
-  (including `market_value_base` for true market-value weighting).
-
-No engine code changes are required to move from sample to live data.
-
----
-
-## P1 upgrade — Chinese cockpit, future events, sources, dedupe, decay
-
-### Chinese UI & explanations
-The cockpit (`v6.html` / `v6.js`) and all generated explanations are in
-professional finance Chinese (偏利好 / 偏利空 / 中性 / 多空分歧 / 不确定; 直接影响 /
-二次传导 / 反身性·情绪). Tickers, company names and source names stay in English.
-The banned-phrase guard (`templates.BANNED_PHRASES`) now also blocks Chinese
-instruction terms (买入/卖出/止损/加仓…). Source headlines echoed inside straight
-quotes are data, not advice, and are excluded from the guard.
-
-### Future-event countdown (`timing.py`)
-Scheduled catalysts (FOMC, CPI, jobs, earnings dates, product launches, policy
-announcements) carry `scheduled_at` / `effective_at` plus `anticipation_score`,
-`priced_in_score`, `surprise_sensitivity`, `post_event_decay_hours`, and
-`sell_the_news_risk`. `temporal_profile(event, now)` derives:
-
-- **phase** — `upcoming` → `anticipation` → `live` → `post_event` → `expired`.
-- **countdown** — signed seconds/days to the release.
-- **time_weight** (0..1) — ramps UP during anticipation (the market pre-prices
-  expectations, capped at the anticipation fraction) and decays DOWN after the
-  release (half-life `post_event_decay_hours`).
-- **direction_factor** (-1..1) — normally 1; right after a high priced-in /
-  high sell-news release it goes toward 0 or flips negative → **利好出尽**.
-
-The engine multiplies each contribution by the signed
-`temporal_multiplier = time_weight × direction_factor`. Thus a future event is
-included in scoring *before* it happens (to the extent it is pre-priced), peaks
-around the release, then fades — a transparent
-`future_impact = base × anticipation × confidence × relevance × time_weight`.
-The portfolio payload also exposes a sorted `future_timeline` for the countdown
-section. **Three catalyst behaviours** are distinguished:
-A) announce-only (Fed) — low pre-pricing, most impact on release;
-B) pre-priced (earnings/CPI) — meaningful anticipation weight;
-C) sell-the-news (high priced-in + risk) — realized direction may flip.
-
-### Time decay
-Recent past headlines decay by a per-event-type half-life (`timing._RECENT_DECAY_H`);
-scheduled events decay by `post_event_decay_hours`. The UI shows the state as
-预期升温 / 进行中 / 影响衰减 / 利好出尽风险 / 事件已兑现.
-
-### Event dedupe (`dedupe.py`)
-The same story from multiple feeds is collapsed by a
-`(event_type, entity, day-bucket)` signature plus a token-Jaccard near-duplicate
-check. The representative keeps the highest confidence/magnitude, records
-`source_count` + `source_list`, and gets a small **capped** confidence boost
-(≤ +0.10). Impact is never multiplied by source count.
-
-### Public source adapters (`sources/`)
-Keyless, isolated from the engine, each honest about its `data_mode`:
-
-| adapter | source | status |
+| 适配器 | 来源 | 说明 |
 |---|---|---|
-| `yahoo_rss` | Yahoo Finance headline RSS (per ticker) | **live-capable**, fixture fallback |
-| `google_news_rss` | Google News RSS search | **live-capable**, fixture fallback |
-| `sec_edgar` | SEC EDGAR submissions JSON (ticker→CIK) | **live-capable** for covered CIKs, else unavailable |
-| `fred_calendar` | macro calendar | **fixture-only** (FRED needs an API key → out of scope) |
-| `analyst_headlines` | analyst calls | **fixture-only** (public research is paywalled) |
-
-The `registry` runs every adapter in isolation (one failure never aborts the
-page), classifies items into events, dedupes, caches results for 120 s, and
-rolls per-source modes into one `sources_overall_mode`. Network is **off by
-default** (fixture mode, instant); `?live=1` attempts live fetches with a 4 s
-per-request timeout. Modes: `live` / `live-partial` / `fixture` / `unavailable`
-/ `error`.
-
-### Broader coverage & demo portfolios
-The exposure registry now covers AAPL, MSFT, NVDA, AMD, TSLA, META, GOOGL, JPM,
-XOM, UNH, TSM and ETF/leveraged/factor assets QQQ, TQQQ, SGOV, GLD (plus the
-original HK/A-share names). Five named demo portfolios are selectable via
-`?demo=<id>`. Unknown tickers fall back to a flagged generic profile.
-
-### How to add things
-- **New ticker/exposure**: add a `HoldingExposure` to `exposure._PROFILES`
-  (or `_PROFILES_EXTRA`). Use the signed-beta-vs-broad-direction convention.
-- **New demo portfolio**: add an entry to `exposure.DEMO_PORTFOLIOS`.
-- **New event type / keyword**: add a `_Rule` to `classifier._RULES` and the
-  type to `schemas.EVENT_TYPES` (+ Chinese label in `templates.EVENT_TYPE_CN`).
-- **New source**: implement an adapter class with `id`/`name`/`source_type`/
-  `fetch(...) -> FetchResult` in `sources/adapters.py` and append it to
-  `ALL_ADAPTERS`. Return fixture items when `allow_network` is False.
+| `yahoo_rss` | Yahoo Finance 标题 RSS（按 ticker） | 可实时，失败回退示例 |
+| `google_news_rss` | Google News RSS 检索 | 可实时，失败回退示例 |
+| `sec_edgar` | SEC EDGAR 提交 JSON（ticker→CIK） | 覆盖名单内可实时，否则未接 |
+| `fred_calendar` | 宏观日历 | 仅示例（需密钥，超出范围） |
+| `analyst_headlines` | 机构观点 | 仅示例（公开研报多为付费） |
 
 ---
 
-## How to run
+## 事件类型
+
+| 类型 | 覆盖内容 |
+|---|---|
+| **宏观** | 利率、通胀、就业、汇率、商品、政策等总量层面事件 |
+| **公司公告** | 财报、业绩指引、并购、产品与公司自身消息 |
+| **机构观点** | 评级与研究观点（当前为示例数据） |
+| **情绪** | 风险偏好、资金流向、风险开启/规避等反身性信号 |
+| **未来事件** | FOMC、CPI、就业数据、财报日、产品发布、政策公布等带倒计时的计划内催化 |
+
+每个事件以 `MarketEvent` 表示，携带 `source_type`（macro / company / institutional
+/ official / sentiment）、`event_type`、`direction`、`magnitude`、`confidence`、
+`affected_tags`、`related_tickers`、`decay_hours` 等字段，并保留分类状态与冲突标记
+以便确定性审计。
+
+---
+
+## 持仓影响路径
+
+`impact_engine` 把一个事件通过以下通道归因到持仓，每个命中的标签只计入**一个**
+通道（直接 > 二次传导），避免重复计数：
+
+1. **直接影响** — 公司自身消息，或持仓对宏观因子的自身反应（带符号的因子敏感度）
+   与主题因子重叠。
+2. **二阶传导** — 事件经由供应商 / 客户 / 板块 beta 链条间接作用于持仓，而非公司
+   自身新闻。
+3. **情绪 / 反身性** — 定位与风险开启/规避的反馈环，按每只持仓的反身性敞口缩放
+   （保留标签 `risk_sentiment` 始终走此通道）。
+4. **未来事件** — 计划内催化事件按时间加权纳入：在「预期升温」阶段逐步计入（市场
+   提前定价），临近发布时达到峰值，发布后按半衰期衰减；对高度提前定价的事件，发布
+   后方向可能走向中性甚至反转（**利好出尽**）。
+
+打分公式透明、可逐项复核：
+
+```
+impact = position_weight        # 持仓权重
+       × effective_direction    # +1 / -1 / 0
+       × magnitude              # 1..5
+       × relevance              # 0..1（与通道、beta 相关）
+       × confidence             # 0..1
+       × decay_factor           # 时间衰减
+```
+
+聚合时分别累加正负贡献：`net = 正 − |负|`，`gross = 正 + |负|`；当正负双方都达到
+`gross` 的 30% 以上时判为「多空分歧」，否则按净额符号判为偏利好 / 偏利空 / 中性；
+若非分歧读数的平均 `confidence < 0.4`，则标注为「不确定」。无对应画像的持仓会得到
+中性的通用画像（标记 `matched_profile: false`），不会被静默丢弃。
+
+---
+
+## 页面与 API 入口
+
+Flask 路由（位于 `app.py`）：
+
+- **页面入口**：`GET /modeling/v6` — 提供中文情报驾驶舱页面（`static/modeling/v6.html`）。
+- **API 入口**：`GET /api/modeling/v6/intelligence` — 返回情报载荷。复用应用已有的
+  持仓数据并以成本基准加权；默认不抓取实时行情，可完全离线运行。常用查询参数：
+  - `?demo=<id>` — 使用命名的演示组合（`sample`、`us_megacap_tech`、
+    `leveraged_growth`、`balanced`、`ai_semis`；`?demo=1` 等价于 `sample`）。
+  - `?sources=1` — 以**示例**模式合并公共来源 feed（用于查看来源标识）。
+  - `?live=1` — 对免密钥公共来源做**尽力而为**的实时抓取。
+
+组合跟踪器首页（`static/index.html`）中已加入 V6 的导航入口。
+
+---
+
+## 本地运行与测试
+
+运行：
 
 ```bash
-python -m venv .venv && .venv/Scripts/activate   # Windows
+python -m venv .venv
 pip install -r requirements.txt
 python app.py
 ```
 
-Open <http://127.0.0.1:5000/> → click the **V6 · Market Intelligence** banner,
-or go directly to <http://127.0.0.1:5000/modeling/v6>. Use the 组合 selector to
-switch between **我的持仓** and the demo portfolios, and **合并来源** to merge the
-public-source feed (fixture mode).
+打开 <http://127.0.0.1:5000/>，在「建模工具」菜单中点击 **V6 市场情报雷达**，或
+直接访问 <http://127.0.0.1:5000/modeling/v6>。用组合选择器在「我的持仓」与演示组合
+之间切换，用「合并来源」并入公共来源 feed（示例模式）。
 
-## How to test
+聚焦测试套件（离线、确定性）：
 
 ```bash
-# focused V6 suite (offline, deterministic)
-python -m pytest tests/test_v6_classifier.py tests/test_v6_impact_engine.py \
-  tests/test_v6_boundaries.py tests/test_v6_timing.py tests/test_v6_dedupe.py \
-  tests/test_v6_sources.py tests/test_v6_chinese.py -q
+python -m pytest tests/test_v6_boundaries.py tests/test_v6_chinese.py \
+  tests/test_v6_classifier.py tests/test_v6_dedupe.py \
+  tests/test_v6_impact_engine.py tests/test_v6_macro_exposures.py \
+  tests/test_v6_p2.py tests/test_v6_qa_correctness.py \
+  tests/test_v6_sources.py tests/test_v6_structural_repairs.py \
+  tests/test_v6_timing.py tests/test_v6_transparency.py -q
 ```
 
-Coverage: two-stage classification and morphology; event→holding matching (all channels + match-kind);
-impact scoring; portfolio-weighted scoring; conflict aggregation; future-event
-phases / anticipation ramp / decay / sell-the-news; dedupe; RSS+Atom parsing
-(from saved samples, **no network**) and registry fixture behaviour; Chinese
-localization + the no-buy/sell guarantee (English + Chinese); broad demo
-portfolios + unknown-ticker fallback; and the no-LLM static guard.
+覆盖范围：两段式分类与形态匹配；事件→持仓的各通道匹配；影响打分与组合加权；冲突
+聚合；未来事件的阶段 / 预期升温 / 衰减 / 利好出尽；去重；RSS+Atom 解析（基于离线
+样本，**无网络**）与来源注册表的示例行为；中文本地化与无买卖保证（中英双语）；
+宽口径演示组合与未知 ticker 回退；以及「无 LLM」静态护栏。
 
 ---
 
-## Known limitations
+## 局限性
 
-- Live source fetching is best-effort and **off by default**; without network
-  (or for FRED/analyst sources) the feed runs in fixture mode, clearly labelled.
-- Exposure profiles are hand-curated; unknown tickers use a neutral generic
-  profile (flagged `matched_profile: false`).
-- Weighting uses cost basis (or equal-weight fallback) unless live market values
-  are supplied; it is labelled accordingly.
-- Anticipation/priced-in/sell-the-news parameters are deterministic heuristics,
-  not calibrated to historical data — they are transparent, not predictive.
-- Gold's inflation-fear / safe-haven support and real-yield / dollar pressure
-  are deterministic heuristic exposures; they may correctly produce a mixed
-  result, but are not calibrated forecasts.
-- SEC EDGAR live coverage is limited to a small built-in ticker→CIK map.
+- 实时抓取是尽力而为且**默认关闭**；无网络时（或 FRED / 机构观点类来源）以示例
+  模式运行，并明确标注。
+- 持仓画像为人工整理；未知 ticker 使用中性通用画像（标记 `matched_profile: false`）。
+- 在未提供实时市值的情况下，权重使用成本基准（或等权回退），并相应标注。
+- 与预期升温 / 提前定价 / 利好出尽相关的参数均为**确定性启发式**：数值固定、可审计，
+  属于透明的规则设定，而非经过校准的统计结论，也不应被当作对市场走势的承诺。
+- 黄金的避险 / 通胀担忧支撑与实际利率 / 美元压力为确定性启发式敞口，可能正确地给出
+  「多空分歧」结果，但同样不是被校准过的结论。
+- SEC EDGAR 的实时覆盖仅限于内置的小型 ticker→CIK 映射。
 
-## Recommended next 5 improvements
+---
 
-1. Wire real market-value weighting from the live `/api/portfolio` rows.
-2. Persist live-fetched events with their real publish timestamps so decay and
-   dedupe operate on genuine multi-feed data.
-3. Expand the ticker→CIK map (or fetch the official mapping) for full EDGAR
-   coverage, and add an earnings-calendar source for real `scheduled_at` dates.
-4. Calibrate anticipation/sell-the-news parameters per event type from history.
-5. Add a macro-theme scenario view (group drivers by theme) and a holdings
-   heat-map across channels.
+## 后续方向
+
+- 从实时持仓数据接入真实市值加权。
+- 持久化实时抓取到的事件及其真实发布时间，使衰减与去重作用于真正的多来源数据。
+- 扩充 ticker→CIK 映射以提升 EDGAR 覆盖，并接入财报日历以获得真实的 `scheduled_at`。
+- 增加宏观主题情景视图（按主题聚合驱动因素）与跨通道的持仓热力图。
