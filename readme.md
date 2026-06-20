@@ -1,9 +1,10 @@
 # Capital Studio｜资本建模工作台
 
-A local-first financial modeling and M&A strategy lab — DCF, formula-native LBO workbook export, and deterministic M&A deal simulation.
+A local-first financial modeling and M&A strategy lab — DCF, formula-native LBO workbook export, deterministic M&A deal simulation, and V6 portfolio-aware market intelligence.
 
 本地优先（local-first）的金融建模与并购推演工作台，深色终端风格，支持港股 / 美股 / A 股。
-集成三大模块：**DCF 估值看板**、**公式原生 LBO 工作簿导出**、**确定性 M&A 对战推演**。
+集成四大模块：**DCF 估值看板**、**公式原生 LBO 工作簿导出**、**确定性 M&A 对战推演**，
+以及 **V6 组合感知市场情报（事件影响引擎）**。
 
 > ⚠️ 仅供**教育与研究用途**，**非投资建议**。详见 [DISCLAIMER.md](DISCLAIMER.md)。
 
@@ -18,7 +19,7 @@ A local-first financial modeling and M&A strategy lab — DCF, formula-native LB
 
 ---
 
-## 三大核心模块 / Core modules
+## 四大核心模块 / Core modules
 
 ### 1. Equity / DCF Dashboard（股票与 DCF 估值看板）
 - 组合概览、持仓盈亏、多币种（HKD / USD / CNY）、个股详情与历史行情。
@@ -36,6 +37,39 @@ A local-first financial modeling and M&A strategy lab — DCF, formula-native LB
   可行性（viability）引擎、A&D（accretion/dilution）引擎、对局与结算逻辑。
 - **完全确定性（deterministic）**：seed / precompute 逻辑，相同输入恒得相同输出，
   **不依赖 LLM / 插件 / broker API**。
+
+### 4. V6 Market Intelligence（组合感知市场情报 / 事件影响引擎）
+- 把宏观、公司公告、分析师观点与情绪类事件表示为结构化记录，映射到你已有的持仓，
+  解释事件可能从哪些路径影响组合、方向如何。
+- **确定性、非 LLM**：分类、匹配、评分、文案全部基于规则，相同输入恒得相同输出。
+- 详见下方 [V6 Market Intelligence 小节](#v6-market-intelligence市场情报引擎)。
+
+---
+
+## V6 Market Intelligence｜市场情报引擎
+
+V6 是一个**确定性、非 LLM** 的「组合感知市场情报模块」（Market Intelligence
+Cockpit）。它把宏观、公司公告、分析师观点与情绪类事件表示为结构化记录，映射到你
+已有的持仓上，回答「今天的事件可能从哪些路径影响我的组合、方向如何」。
+
+**它能做什么：**
+- **持仓级事件影响**：逐只持仓的事件归因与影响方向（偏利好 / 偏利空 / 中性 / 多空
+  分歧 / 不确定），并给出文字解释。
+- **组合级摘要**：跨持仓聚合的组合级风险脉络与自然语言解读。
+- **多通道评分**：宏观 / 公司公告 / 分析师 / 情绪等来源，分别经由「直接影响、二阶
+  传导、情绪·反身性」通道评分。
+- **事件分组**：按主题对驱动事件做确定性分组。
+- **未来事件倒计时**：FOMC / CPI / 财报日等计划内催化的阶段与倒计时。
+- **时间衰减**：近期事件按事件类型半衰期衰减，计划事件按发布后衰减。
+- **中文 cockpit**：深色终端风格的中文情报驾驶舱页面。
+
+**定位（重要）：** V6 是**研究与情景解释工具**，用于理解事件—持仓之间的影响脉络；
+它**不是交易指令工具**——不构成投资建议，不给出操作指令、价位目标或风险触发位。
+
+**入口 / 路径：**
+- 页面：`/modeling/v6`
+- API：`/api/modeling/v6/intelligence`
+- 设计细节、字段说明与数据源模式见 [`modeling/v6/README.md`](modeling/v6/README.md)。
 
 ---
 
@@ -72,6 +106,8 @@ python app.py
 | `/modeling/ma/arena` | Deal Arena 对战 |
 | `/modeling/ma/arena/play` | Arena 对战桌面 |
 | `/modeling/ma/arena/match/setup` | Arena 对局设置 |
+| `/modeling/v6` | V6 市场情报 cockpit（组合感知事件影响）|
+| `/api/modeling/v6/intelligence` | V6 情报 API（持仓级 + 组合级影响载荷）|
 
 ---
 
@@ -82,9 +118,10 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-当前基线：**1136 个测试全部通过**（R2 安全加固后；若重跑后数量变化，以实际结果为准）。
+当前基线：**1297 个测试全部通过**（含 V6 集成后；若重跑后数量变化，以实际结果为准）。
 覆盖 DCF、LBO（含 formula-native workbook 导出）、M&A Arena（含 API contract、precompute、
-对局生命周期）以及货币 / 期间 / 审计类回归。
+对局生命周期）、**V6 市场情报引擎**（分类、事件→持仓匹配、组合评分、未来事件倒计时、
+去重、中文本地化与非荐股边界），以及货币 / 期间 / 审计类回归。
 
 ---
 
@@ -118,8 +155,11 @@ modeling/
 ├── lbo_*.py            # LBO 引擎 + formula-native workbook 导出
 ├── data_quality.py /   # DCF 数据质量与行业分类
 │   industry_classification.py
-└── ma/                 # 确定性 M&A Arena：seed deck、协同/可行性引擎、
-                        #   A&D engine、对局逻辑、precompute
+├── ma/                 # 确定性 M&A Arena：seed deck、协同/可行性引擎、
+│                       #   A&D engine、对局逻辑、precompute
+└── v6/                 # V6 组合感知市场情报：事件 schema、exposure 画像、
+                        #   分类器、impact engine、未来事件 timing、去重、
+                        #   公共源适配器、中文 cockpit API（详见 v6/README.md）
 
 static/                 # 前端页面与 JS（index / detail）
 └── modeling/           # DCF / LBO / M&A Arena 前端页面与 JS
