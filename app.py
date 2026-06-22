@@ -85,7 +85,9 @@ CORS(app, resources={r"/api/*": {"origins": [
 # 仅作用于 /api/* 路径，静态资源不受影响。
 @app.after_request
 def _no_store_for_api(response):
-    if request.path.startswith("/api/"):
+    # Default no-store for every /api/* JSON response, but respect a stronger
+    # Cache-Control a specific route already set (e.g. the V6 freshness guard).
+    if request.path.startswith("/api/") and "Cache-Control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -2901,7 +2903,12 @@ def api_modeling_v6_intelligence():
             holdings=holdings or None,
             portfolio_is_demo=portfolio_is_demo,
         )
-        return jsonify(_clean_nan(payload))
+        resp = jsonify(_clean_nan(payload))
+        # Freshness guard: this feed must never be served from a stale cache, so
+        # the UI's "latest" reflects the live response, not a yesterday copy.
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
     except Exception:
         app.logger.exception("api_modeling_v6_intelligence failed")
         return jsonify({"error": "Unable to build V6 intelligence response."}), 500
@@ -3198,4 +3205,5 @@ if __name__ == "__main__":
     # which is a remote-code-execution surface) stays OFF unless explicitly
     # enabled via env, e.g. FLASK_DEBUG=1 / true / yes.
     _debug = os.environ.get("FLASK_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
-    app.run(debug=_debug, host="127.0.0.1", port=5000)
+    _port = int(os.environ.get("PORT", "5000"))
+    app.run(debug=_debug, host="127.0.0.1", port=_port)

@@ -17,11 +17,15 @@ Sources:
 from __future__ import annotations
 
 import json
+import logging
 from urllib.parse import quote_plus
 
 from modeling.v6.sources.base import (
     RawItem, FetchResult, http_get, parse_feed, DEFAULT_TIMEOUT,
+    public_error_status,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------
@@ -77,7 +81,11 @@ class GoogleNewsRSS:
         try:
             xml = http_get(self.url_tmpl.format(q=quote_plus(query)), timeout)
         except Exception as e:  # noqa: BLE001
-            return FetchResult(self.id, self.name, "error", _google_fixture(), error=str(e))
+            # Raw exception kept server-side only; client gets a sanitized status.
+            logger.debug("v6 %s fetch failed", self.id, exc_info=True)
+            safe = public_error_status(e, source_name=self.name)
+            return FetchResult(self.id, self.name, "error", _google_fixture(),
+                               error=safe["error"], error_code=safe["error_code"])
         items = [
             RawItem(title=r["title"], summary=r["summary"], url=r["link"],
                     published=r["published"], source=self.name, source_type=self.source_type)

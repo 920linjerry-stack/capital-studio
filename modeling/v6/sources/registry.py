@@ -8,13 +8,18 @@ hammering live sources on rapid reloads.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 from modeling.v6.schemas import MarketEvent
-from modeling.v6.sources.base import raw_to_event, FetchResult, DEFAULT_TIMEOUT
+from modeling.v6.sources.base import (
+    raw_to_event, FetchResult, DEFAULT_TIMEOUT, public_error_status,
+)
 from modeling.v6.sources.adapters import ALL_ADAPTERS
 from modeling.v6.dedupe import dedupe_events
+
+logger = logging.getLogger(__name__)
 
 SOURCE_REGISTRY = ALL_ADAPTERS
 
@@ -80,10 +85,15 @@ def _run_adapters(tickers, keywords, allow_network, timeout) -> list[FetchResult
                 timeout=timeout, allow_network=allow_network,
             ))
         except Exception as e:  # noqa: BLE001 - registry must never raise
+            # Raw exception (may carry paths/URLs/secrets) stays server-side
+            # only; the client gets a generic, classified, sanitized status.
+            adapter_id = getattr(adapter, "id", "unknown")
+            logger.debug("v6 source adapter %s failed", adapter_id, exc_info=True)
+            safe = public_error_status(e, source_name=getattr(adapter, "name", None))
             results.append(FetchResult(
-                getattr(adapter, "id", "unknown"),
+                adapter_id,
                 getattr(adapter, "name", "unknown"),
-                "error", [], error=str(e),
+                "error", [], error=safe["error"], error_code=safe["error_code"],
             ))
     return results
 
