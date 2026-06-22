@@ -50,6 +50,35 @@
     .v6-feed-count { font-size:11px; color:var(--text-muted); margin-bottom:8px; }
     .v6-method { font-size:11.5px; color:var(--text-muted); line-height:1.85; }
 
+    /* ── freshness banner ────────────────────────────────── */
+    .v6-fresh { border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); padding:12px 16px; margin-bottom:12px; }
+    .v6-fresh-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+    @media (max-width:880px){ .v6-fresh-grid{ grid-template-columns:repeat(3,1fr);} }
+    @media (max-width:520px){ .v6-fresh-grid{ grid-template-columns:repeat(2,1fr);} }
+    .v6-fresh-cell .ffl { font-size:10px; color:var(--text-muted); letter-spacing:.3px; margin-bottom:4px; }
+    .v6-fresh-cell .ffv { font-size:12.5px; font-weight:600; font-family:"Consolas",monospace; }
+    .v6-fresh-warn { display:flex; gap:8px; align-items:flex-start; margin-top:11px; padding-top:10px; border-top:1px solid var(--border); font-size:12px; color:#e8c97a; line-height:1.55; }
+    .v6-fresh-warn .ic { flex-shrink:0; }
+
+    /* ── breaking / sentiment alerts ─────────────────────── */
+    .v6-alerts { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:10px; }
+    .v6-alerts-empty { font-size:12px; color:var(--text-muted); border:1px dashed var(--border); border-radius:8px; padding:11px 14px; margin-bottom:6px; }
+    .v6-alert { border:1px solid var(--border); border-left-width:3px; border-radius:8px; padding:12px 14px; background:var(--bg-secondary); }
+    .v6-alert.breaking { border-left-color:var(--red); background:linear-gradient(135deg, rgba(248,81,73,.07), transparent); }
+    .v6-alert.elevated { border-left-color:var(--gold); background:linear-gradient(135deg, rgba(210,153,34,.06), transparent); }
+    .v6-alert.normal { border-left-color:var(--border); }
+    .v6-alert-head { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:7px; }
+    .v6-alert-urg { font-size:10px; font-weight:800; font-family:"Consolas",monospace; letter-spacing:.5px; padding:2px 8px; border-radius:999px; }
+    .v6-alert-urg.breaking { color:var(--red); background:rgba(248,81,73,.14); border:1px solid rgba(248,81,73,.5); }
+    .v6-alert-urg.elevated { color:var(--gold); background:rgba(210,153,34,.14); border:1px solid rgba(210,153,34,.5); }
+    .v6-alert-urg.normal { color:var(--text-muted); background:var(--bg-tertiary); border:1px solid var(--border); }
+    .v6-alert-score { margin-left:auto; font-size:10.5px; color:var(--text-muted); font-family:"Consolas",monospace; }
+    .v6-alert-ttl { font-size:13.5px; font-weight:700; line-height:1.45; margin-bottom:5px; }
+    .v6-alert-sum { font-size:11.5px; color:var(--text-muted); line-height:1.6; }
+    .v6-alert-tk { font-size:11px; color:var(--text-primary); font-family:"Consolas",monospace; margin-top:7px; }
+    .v6-alert-tags { margin-top:6px; display:flex; gap:4px; flex-wrap:wrap; }
+    .v6-alert-meta { font-size:10px; color:var(--text-muted); font-family:"Consolas",monospace; margin-top:8px; }
+
     /* ── status bar ──────────────────────────────────────── */
     .v6-statusbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11.5px; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:8px 14px; margin-bottom:12px; }
     .v6-statusbar b { color:var(--text-primary); font-family:"Consolas",monospace; }

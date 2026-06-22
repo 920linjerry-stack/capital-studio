@@ -31,6 +31,25 @@ const CHANNEL_CN = { direct: "直接影响", second_order: "二次传导", refle
 const PHASE_CN = { upcoming: "待公布", anticipation: "预期升温", live: "进行中", post_event: "影响衰减", expired: "已兑现" };
 const MODE_CN = { live: "公开实时源", "live-partial": "部分实时", fixture: "示例数据", unavailable: "不可用", error: "错误" };
 const MATCH_KIND_CN = { ticker: "代码命中", alias: "名称命中", macro_factor: "宏观因子", factor_tag: "主题因子", second_order: "二次传导", sector_transmission: "行业 / ETF 保守传导", reflexivity: "情绪敞口" };
+// Freshness vocabulary (mirrors modeling/v6/freshness.py).
+const FRESH_CN = { fresh: "新鲜", delayed: "存在延迟", stale: "陈旧", fixture: "示例回退", unknown: "时间未知", future_event_active: "未来事件", scheduled_event: "已排期" };
+const FRESH_CLS = { fresh: "bullish", delayed: "mixed", stale: "bearish", fixture: "neutral", unknown: "neutral" };
+const SRCMODE_CN = { live: "实时", partial_live: "部分实时", fixture_fallback: "示例回退", offline: "离线 / 未接实时源", error: "获取错误" };
+const SRCMODE_CLS = { live: "bullish", partial_live: "mixed", fixture_fallback: "neutral", offline: "neutral", error: "bearish" };
+// Breaking-alert vocabulary (mirrors modeling/v6/breaking.py).
+const URGENCY_CN = { breaking: "突发", elevated: "升温", normal: "一般" };
+const ALERT_TYPE_CN = {
+  breaking_news: "突发新闻", headline_velocity: "标题密集", sentiment_shock: "情绪切换",
+  macro_shock: "宏观冲击", sector_shock: "板块 / 主题", company_shock: "个股新闻流", source_failure: "数据源告警",
+};
+const ALERT_DIR_CN = { bullish: "偏利好", bearish: "偏利空", mixed: "多空分歧", neutral: "中性", unknown: "方向待定" };
+const fmtTs = (s) => (s ? String(s).replace("T", " ").replace("Z", " UTC").replace(/(\+\d{4})$/, " $1") : "—");
+const ageZh = (m) => {
+  if (m === null || m === undefined) return "—";
+  if (m < 60) return `${Math.round(m)} 分钟`;
+  if (m < 1440) return `${(m / 60).toFixed(1)} 小时`;
+  return `${(m / 1440).toFixed(1)} 天`;
+};
 const ETYPE_CN = {
   analyst_upgrade: "上调评级", analyst_downgrade: "下调评级", price_target_raise: "上调目标价",
   price_target_cut: "下调目标价", earnings_beat: "业绩超预期", earnings_miss: "业绩不及预期",
@@ -58,6 +77,8 @@ function qstr() {
   const p = new URLSearchParams();
   if (activeDemo) p.set("demo", activeDemo);
   if (mergeSources) p.set("sources", "1");
+  // Cache-buster so the browser never re-serves a stale "latest" payload.
+  p.set("t", Date.now().toString());
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -69,7 +90,7 @@ async function load() {
   $("v6-body").innerHTML = `<div class="v6-loading">正在计算组合事件影响…</div>`;
   $("btn-sources").classList.toggle("active", mergeSources);
   try {
-    const resp = await fetch(`${API}/api/modeling/v6/intelligence${qstr()}`);
+    const resp = await fetch(`${API}/api/modeling/v6/intelligence${qstr()}`, { cache: "no-store" });
     DATA = await resp.json();
     if (DATA.status === "error") throw new Error("引擎构建失败");
     render();
@@ -98,7 +119,9 @@ function render() {
   const pf = DATA.portfolio;
   // First screen = the answer: status, net read, why, key drivers, risks, what's next.
   const primary =
+    renderFreshnessBanner() +
     renderStatusBar(pf) +
+    renderAlerts() +
     renderSummary(pf) +
     renderNarrative(pf) +
     renderDrivers(pf) +
@@ -121,6 +144,64 @@ function renderMethodology() {
     未来事件按预期定价提前计入、事件后按半衰期衰减，并识别「利好出尽」风险。公开来源适配器（Yahoo / Google News / SEC EDGAR / 宏观日历 / 机构标题）默认以示例 fixture 运行，可在联网时切换为公开实时源；每个来源都会如实标注 live / 部分实时 / 示例回退 / 不可用 状态。
     本视图仅为事件—持仓影响方向解读，不构成投资建议，不提供买入 / 卖出信号、目标价或止损位。
   </div>`;
+}
+
+// Freshness banner: the first thing the user sees -- can I trust "latest"?
+function renderFreshnessBanner() {
+  const fz = DATA.freshness || {};
+  const status = fz.freshness_status || DATA.freshness_status || "unknown";
+  const smode = fz.source_mode || DATA.source_mode || "fixture_fallback";
+  const warn = fz.freshness_warning_zh || DATA.freshness_warning_zh || "";
+  const cell = (label, value) => `<div class="v6-fresh-cell"><div class="ffl">${label}</div><div class="ffv">${value}</div></div>`;
+  const stCls = FRESH_CLS[status] || "neutral";
+  const smCls = SRCMODE_CLS[smode] || "neutral";
+  const warnHtml = warn
+    ? `<div class="v6-fresh-warn"><span class="ic">⚠</span><span>${esc(warn)}</span></div>` : "";
+  return `<div class="v6-fresh">
+    <div class="v6-fresh-grid">
+      ${cell("数据状态", `<span class="badge ${stCls}">${esc(FRESH_CN[status] || status)}</span>`)}
+      ${cell("来源模式", `<span class="badge ${smCls}">${esc(SRCMODE_CN[smode] || smode)}</span>`)}
+      ${cell("生成时间", esc(fmtTs(DATA.generated_at)))}
+      ${cell("最新事件时间", esc(fmtTs(fz.newest_event_published_at)))}
+      ${cell("最旧事件时间", esc(fmtTs(fz.oldest_event_published_at)))}
+      ${cell("数据年龄", esc(ageZh(fz.max_event_age_minutes)))}
+    </div>
+    ${warnHtml}
+  </div>`;
+}
+
+// Breaking-news / sudden-sentiment alert cards (deterministic, news-flow only).
+function renderAlerts() {
+  const alerts = DATA.alerts || [];
+  const sum = DATA.alert_summary || {};
+  if (!alerts.length) {
+    return `<div class="v6-alerts-empty">近 24 小时未检测到突发新闻流或情绪骤变信号（基于公共新闻流聚类）。</div>`;
+  }
+  const cards = alerts.map(a => {
+    const uCls = a.urgency === "breaking" ? "breaking" : a.urgency === "elevated" ? "elevated" : "normal";
+    const dir = ALERT_DIR_CN[a.dominant_direction] || a.dominant_direction;
+    const dirCls = a.dominant_direction === "bullish" ? "bullish" : a.dominant_direction === "bearish" ? "bearish" : "mixed";
+    const fr = a.freshness_status ? `<span class="badge ${FRESH_CLS[a.freshness_status] || "neutral"}" style="font-size:9.5px;">${esc(FRESH_CN[a.freshness_status] || a.freshness_status)}</span>` : "";
+    const tks = (a.affected_tickers || []).length ? `<div class="v6-alert-tk">影响标的：${esc(a.affected_tickers.join("、"))}</div>` : "";
+    const tags = (a.affected_tags || []).slice(0, 6).map(t => `<span class="badge tiny">${esc(t)}</span>`).join(" ");
+    return `<div class="v6-alert ${uCls}">
+      <div class="v6-alert-head">
+        <span class="v6-alert-urg ${uCls}">${esc(URGENCY_CN[a.urgency] || a.urgency)}</span>
+        <span class="badge tiny">${esc(ALERT_TYPE_CN[a.alert_type] || a.alert_type)}</span>
+        <span class="badge ${dirCls}" style="font-size:9.5px;">${esc(dir)}</span>
+        ${fr}
+        <span class="v6-alert-score">强度 ${esc(a.urgency_score)}</span>
+      </div>
+      <div class="v6-alert-ttl">${esc(a.title_zh)}</div>
+      <div class="v6-alert-sum">${esc(a.summary_zh)}</div>
+      ${tks}
+      ${tags ? `<div class="v6-alert-tags">${tags}</div>` : ""}
+      <div class="v6-alert-meta">证据 ${esc(a.evidence_count)} 条 · 来源 ${esc(a.source_count)} 个 · 置信 ${(a.confidence * 100).toFixed(0)}%</div>
+    </div>`;
+  }).join("");
+  const head = `<div class="v6-section-title">突发 / 情绪雷达
+    <span class="cnt">${sum.breaking || 0} 突发 · ${sum.elevated || 0} 升温 · 公共新闻流聚类（近实时，可能存在延迟）</span></div>`;
+  return head + `<div class="v6-alerts">${cards}</div>`;
 }
 
 function renderStatusBar(pf) {
@@ -170,16 +251,19 @@ function renderNotices() {
     mock.style.display = "flex";
     $("mock-text").textContent = "已合并公开来源（" + (MODE_CN[DATA.sources_overall_mode] || DATA.sources_overall_mode) + "）。来源可用性以下方「数据源」状态为准。";
   }
-  // stale-data / source-health warning (professional, non-alarming)
+  // stale-data / source-health warning (professional, non-alarming).
+  // Prefer the centralized freshness warning so the page never implies the
+  // data is "today's latest" when it is fixture / delayed / stale / unknown.
   const sw = $("stale-notice");
   const h = DATA.source_health || {};
+  const freshWarn = DATA.freshness_warning_zh || (DATA.freshness || {}).freshness_warning_zh || "";
   if (sw) {
-    if (h.any_error) {
+    if (freshWarn) {
+      sw.style.display = "flex";
+      $("stale-text").textContent = freshWarn;
+    } else if (h.any_error) {
       sw.style.display = "flex";
       $("stale-text").textContent = "部分公开数据源当前不可用或返回错误，已自动回退到示例数据；读数仅供参考。";
-    } else if (h.all_fixture) {
-      sw.style.display = "flex";
-      $("stale-text").textContent = "当前全部为示例回退数据（未联网或来源无实时内容）；开启「合并来源」或联网后可获取公开实时源。";
     } else {
       sw.style.display = "none";
     }
