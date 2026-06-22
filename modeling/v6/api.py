@@ -23,6 +23,8 @@ from modeling.v6.dedupe import dedupe_events
 from modeling.v6.schemas import MarketEvent
 from modeling.v6 import templates
 from modeling.v6 import timing
+from modeling.v6 import freshness as freshness_mod
+from modeling.v6.breaking import detect_breaking
 from modeling.v6.narrative import group_events, portfolio_narrative
 
 # Single source of truth for the non-advice boundary, surfaced to the UI.
@@ -76,7 +78,9 @@ def build_intelligence_response(
     # --- public source adapters: status badges + optional live ingestion --
     from modeling.v6.sources.registry import ingest_events, overall_data_mode, source_health
     tickers = [p["exposure"].ticker for p in portfolio.get("positions", [])]
+    fetch_started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     source_events, source_statuses = ingest_events(tickers=tickers, allow_network=allow_network)
+    fetch_finished_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sources_overall = overall_data_mode(source_statuses)
     sources_health = source_health(source_statuses)
     if include_source_feed:
@@ -105,7 +109,18 @@ def build_intelligence_response(
     else:
         data_mode = "live"
 
-    generated_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ref_now = now or datetime.now(timezone.utc)
+    generated_at = ref_now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Server-local rendering (uses the host timezone; falls back to UTC offset).
+    generated_at_local = ref_now.astimezone().strftime("%Y-%m-%dT%H:%M:%S%z")
+
+    # --- freshness + breaking layers (deterministic, additive) ------------
+    freshness = freshness_mod.compute_freshness(
+        events, source_statuses, now=now,
+        fetch_started_at=fetch_started_at, fetch_finished_at=fetch_finished_at,
+    )
+    breaking = detect_breaking(events, now=now, source_statuses=source_statuses)
+
     # Per-event portfolio relevance, from the driver aggregation, so the UI feed
     # can rank by how much each event actually moves THIS portfolio.
     relevance = {d["event_id"]: d for d in analysis.get("main_drivers", [])}
@@ -119,11 +134,13 @@ def build_intelligence_response(
         age = timing.age_info(e, now)
         row["age_label"] = age["label"]
         row["age_band"] = age["band"]
+        row["freshness_status"] = freshness_mod.event_freshness(e, now)
         ui_events.append(row)
     return {
-        "version": "v6.3",
+        "version": "v6.4",
         "product": "V6 Market Intelligence",
         "generated_at": generated_at,
+        "generated_at_local": generated_at_local,
         "data_mode": data_mode,
         "event_source": event_source,
         "event_count": len(events),
@@ -135,6 +152,15 @@ def build_intelligence_response(
         "sources_overall_mode": sources_overall,
         "source_health": sources_health,
         "source_feed_merged": include_source_feed,
+        # freshness guard rails: never present stale data as "today's latest"
+        "freshness": freshness,
+        "source_mode": freshness["source_mode"],
+        "source_health_summary": sources_health,
+        "freshness_status": freshness["freshness_status"],
+        "freshness_warning_zh": freshness["freshness_warning_zh"],
+        # breaking-news / sudden-sentiment alert layer
+        "alerts": breaking["alerts"],
+        "alert_summary": breaking["summary"],
         "boundaries": BOUNDARIES,
         "portfolio": _strip_portfolio_internal(analysis),
         "events": ui_events,
