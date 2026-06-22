@@ -594,9 +594,10 @@ function renderSources() {
   const cards = srcs.map(s => {
     const rel = s.reliability ? `<span class="badge ${relCls[s.reliability] || "neutral"}" style="font-size:9.5px;">${esc(s.reliability)}</span>` : "";
     const seen = s.last_success ? esc(s.last_success.replace("T", " ").replace("Z", "")) : "—";
+    const errMsg = s.error_zh || s.error || "";   // sanitized, never raw
     return `<div class="v6-source">
       <div class="sn">${esc(s.source_name)} ${modeBadge(s.mode)} ${rel}</div>
-      <div class="mut" style="font-size:10.5px;margin-top:3px;">${s.item_count} 条 · 最近成功 ${seen}${s.error ? " · " + esc(s.error) : ""}</div>
+      <div class="mut" style="font-size:10.5px;margin-top:3px;">${s.item_count} 条 · 最近成功 ${seen}${errMsg ? " · " + esc(errMsg) : ""}</div>
     </div>`;
   }).join("");
   return `<div class="v6-sources">${cards}</div>`;

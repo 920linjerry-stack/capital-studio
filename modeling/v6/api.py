@@ -77,10 +77,15 @@ def build_intelligence_response(
 
     # --- public source adapters: status badges + optional live ingestion --
     from modeling.v6.sources.registry import ingest_events, overall_data_mode, source_health
+    from modeling.v6.sources.base import sanitize_source_status
     tickers = [p["exposure"].ticker for p in portfolio.get("positions", [])]
     fetch_started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     source_events, source_statuses = ingest_events(tickers=tickers, allow_network=allow_network)
     fetch_finished_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Defense-in-depth: re-scrub every source status at the V6 API boundary so a
+    # raw adapter exception can never reach the client via ``sources[].error``,
+    # even if a future adapter forgets to sanitize.
+    source_statuses = [sanitize_source_status(s) for s in source_statuses]
     sources_overall = overall_data_mode(source_statuses)
     sources_health = source_health(source_statuses)
     if include_source_feed:

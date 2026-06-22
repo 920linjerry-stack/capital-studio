@@ -7,7 +7,9 @@ about its ``mode`` (one of :data:`modeling.v6.schemas.DATA_MODES`).
 
 from __future__ import annotations
 
+import json
 import os
+import socket
 import urllib.request
 import urllib.error
 from dataclasses import dataclass, field
@@ -38,23 +40,119 @@ class RawItem:
     related_tickers: list[str] = field(default_factory=list)
 
 
+# --- public-safe source-error sanitization -------------------------------
+# A raw ``str(exception)`` can embed local Windows paths, URLs with query
+# secrets, tokens, or stack detail. None of that may reach the client, so the
+# only error text the API ever emits is one of these fixed, generic strings.
+_GENERIC_ERROR_EN = "Source temporarily unavailable."
+_GENERIC_ERROR_ZH = "来源暂时不可用，已使用可用数据或示例回退。"
+
+# Coarse, public-safe classification codes (no free text).
+_VALID_ERROR_CODES = frozenset({
+    "source_fetch_failed",   # network / HTTP / connection failure
+    "source_timeout",        # request timed out
+    "source_parse_failed",   # feed/JSON/XML could not be parsed
+    "source_unavailable",    # source returned nothing usable
+    "unknown_source_error",  # anything else (still never echoes raw text)
+})
+
+
+def _classify_exception(exc: Any) -> tuple[str, str]:
+    """Map an exception to a (error_code, error_type) pair. Reads only the
+    exception *class*, never its message, so nothing sensitive escapes."""
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return "source_timeout", "timeout"
+    if isinstance(exc, urllib.error.HTTPError):
+        return "source_fetch_failed", "http_error"
+    if isinstance(exc, urllib.error.URLError):
+        reason = getattr(exc, "reason", None)
+        if isinstance(reason, (TimeoutError, socket.timeout)):
+            return "source_timeout", "timeout"
+        return "source_fetch_failed", "network_error"
+    if isinstance(exc, (ConnectionError, OSError)):
+        return "source_fetch_failed", "network_error"
+    if isinstance(exc, ET.ParseError):
+        return "source_parse_failed", "parse_error"
+    if isinstance(exc, json.JSONDecodeError):  # subclass of ValueError -> check first
+        return "source_parse_failed", "parse_error"
+    if isinstance(exc, ValueError):
+        return "source_parse_failed", "value_error"
+    return "unknown_source_error", "unknown_error"
+
+
+def public_error_status(exc: Any = None, *, source_name: str | None = None) -> dict[str, Any]:
+    """Build a deterministic, public-safe error descriptor for a source.
+
+    Returns only fixed/generic fields (``error_code`` / ``error_type`` /
+    ``error`` / ``error_zh`` / ``is_sanitized``). The raw exception text is never
+    included -- callers should log it server-side if observability is needed.
+    """
+    code, etype = _classify_exception(exc)
+    return {
+        "error_code": code,
+        "error_type": etype,
+        "error": _GENERIC_ERROR_EN,
+        "error_zh": _GENERIC_ERROR_ZH,
+        "is_sanitized": True,
+    }
+
+
+def sanitize_source_status(status: dict[str, Any]) -> dict[str, Any]:
+    """Defensive, idempotent scrub of one source-status dict for the API exit.
+
+    Guarantees the outgoing row never echoes a raw ``error`` value: any error
+    text is replaced with the generic message, and a public-safe ``error_code``
+    / ``error_zh`` / ``is_sanitized`` are attached. Public bookkeeping fields
+    (timestamps, counts, reliability) are passed through untouched.
+    """
+    s = dict(status)
+    mode = s.get("mode")
+    code = s.get("error_code")
+    if code not in _VALID_ERROR_CODES:
+        code = None
+    has_error = bool(s.get("error")) or mode in ("error", "unavailable") or bool(code)
+    if has_error:
+        if not code:
+            code = "source_unavailable" if mode == "unavailable" else "source_fetch_failed"
+        s["error_code"] = code
+        s["error"] = _GENERIC_ERROR_EN      # never the raw incoming text
+        s["error_zh"] = _GENERIC_ERROR_ZH
+        s["is_sanitized"] = True
+    else:
+        s["error"] = ""
+        s.pop("error_code", None)
+        s.pop("error_zh", None)
+        s.pop("is_sanitized", None)
+    return s
+
+
 @dataclass
 class FetchResult:
-    """One adapter's outcome. ``mode`` tells the UI how real the data is."""
+    """One adapter's outcome. ``mode`` tells the UI how real the data is.
+
+    ``error`` holds only a generic, public-safe message (set via
+    :func:`public_error_status`); ``error_code`` is the coarse classification.
+    Raw exception text is logged server-side by the registry and never stored
+    here, so it can never reach :meth:`to_status` and the client.
+    """
     source_id: str
     source_name: str
     mode: str                    # live / live-partial / fixture / unavailable / error
     items: list[RawItem] = field(default_factory=list)
     error: str = ""
+    error_code: str = ""
 
     def to_status(self) -> dict[str, Any]:
-        return {
+        # to_status is the single client-facing serialization seam: it routes
+        # through sanitize_source_status so no raw error can ever escape here.
+        return sanitize_source_status({
             "source_id": self.source_id,
             "source_name": self.source_name,
             "mode": self.mode,
             "item_count": len(self.items),
             "error": self.error,
-        }
+            "error_code": self.error_code,
+        })
 
 
 def http_get(url: str, timeout: float = DEFAULT_TIMEOUT) -> str:
