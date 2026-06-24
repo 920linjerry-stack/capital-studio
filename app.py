@@ -61,7 +61,8 @@ from modeling.lbo_return_context import build_return_context
 from modeling.ma.api import build_ma_response
 from modeling.ma.sample_companies import list_sample_companies
 from modeling.ma.precompute import get_arena_pairs_response
-from modeling.v6.api import build_intelligence_response
+
+from modeling.v6.api import build_intelligence_response as build_v6_response
 
 # v3.3.0 段 1 的工具函数（本段段 2 复用）
 from thesis_utils import canonical_ticker
@@ -85,10 +86,13 @@ CORS(app, resources={r"/api/*": {"origins": [
 # 仅作用于 /api/* 路径，静态资源不受影响。
 @app.after_request
 def _no_store_for_api(response):
-    # Default no-store for every /api/* JSON response, but respect a stronger
-    # Cache-Control a specific route already set (e.g. the V6 freshness guard).
-    if request.path.startswith("/api/") and "Cache-Control" not in response.headers:
-        response.headers["Cache-Control"] = "no-store"
+    if request.path.startswith("/api/"):
+        # Respect a stronger no-store header already set by a route (e.g. the V6
+        # intelligence endpoint sets no-store, no-cache, must-revalidate); only
+        # apply the default when the route did not opt into a stronger policy.
+        existing = response.headers.get("Cache-Control", "")
+        if "no-cache" not in existing:
+            response.headers["Cache-Control"] = "no-store"
     return response
 
 PORTFOLIO_FILE   = "portfolio.json"
@@ -540,9 +544,10 @@ def modeling_ma_arena_match_play():
 
 @app.route("/modeling/v6")
 def modeling_v6():
-    """V6 Market Intelligence cockpit: deterministic, rule-based event→holdings
-    impact mapping. Static shell; all data comes from
-    /api/modeling/v6/intelligence."""
+    """V6 Market Intelligence: a deterministic, non-LLM, portfolio-aware event
+    engine. Maps macro/sentiment/institutional/company events onto the Portfolio
+    Tracker holdings and explains impact via direct / second-order / reflexivity
+    channels. No LLM, no brokerage API, no trade signals."""
     return send_from_directory("static/modeling", "v6.html")
 
 
@@ -2783,6 +2788,89 @@ def api_ma_samples():
         })), 500
 
 
+def _v6_attach_market_values(holdings: list) -> list:
+    """Best-effort: attach market_value_base to holdings via live quotes.
+
+    Used only for the opt-in ?weights=market path. Each quote is fetched inside
+    try/except; if ANY holding can't be priced, we return the original rows
+    unchanged so the V6 adapter falls back cleanly to cost-basis weighting
+    (never a partial, currency-mixed weighting). Never raises.
+    """
+    base_currency = "USD"
+    enriched = []
+    try:
+        for h in holdings:
+            quote = get_quote_router(h["symbol"])
+            price = quote.get("current_price") if isinstance(quote, dict) else None
+            if price is None:
+                return holdings  # incomplete -> clean cost-basis fallback
+            currency = quote.get("currency", "USD")
+            mv_native = float(price) * float(h.get("quantity", 0) or 0)
+            mv_base, _ = convert_to_base(mv_native, currency, base_currency)
+            enriched.append({**h, "market_value_base": mv_base})
+    except Exception:
+        app.logger.exception("V6 market-value weighting failed; using cost-basis")
+        return holdings
+    return enriched
+
+
+@app.route("/api/modeling/v6/intelligence", methods=["GET"])
+def api_v6_intelligence():
+    """V6 Market Intelligence payload: portfolio-aware event impact.
+
+    Reuses the user's existing Portfolio Tracker holdings (portfolio.json) for
+    ticker + cost-basis weighting -- no live quote fetch by default, so this runs
+    fully offline and deterministically. Events come from the bundled sample feed
+    (data_mode reflects this). Query params: ?demo=<id> sample/demo portfolio;
+    ?sources=1 merge source feed (fixture); ?live=1 best-effort live sources;
+    ?weights=market best-effort live market-value weighting (falls back to
+    cost-basis). Non-LLM, no brokerage API, no trade signals.
+    """
+    try:
+        from modeling.v6.exposure import get_demo_portfolio, list_demo_portfolios
+        demo = request.args.get("demo", "").strip().lower()
+        if demo in ("1", "true", "yes"):
+            demo = "sample"
+        # ?live=1 attempts keyless public sources (best effort, slower);
+        # ?sources=1 merges the source feed in fixture mode (fast, for badges).
+        allow_network = request.args.get("live", "").lower() in ("1", "true", "yes")
+        include_feed = allow_network or request.args.get("sources", "").lower() in ("1", "true", "yes")
+        kwargs = {"allow_network": allow_network, "include_source_feed": include_feed}
+        # ?weights=market attempts live market-value weighting (best effort);
+        # falls back to cost-basis on any failure. Default = cost-basis (offline).
+        want_market = request.args.get("weights", "").lower() in ("market", "mv", "marketvalue")
+        if demo:
+            holdings = get_demo_portfolio(demo)
+            payload = build_v6_response(holdings, event_source="sample", portfolio_is_demo=True, **kwargs)
+        else:
+            holdings = load_portfolio()
+            if want_market:
+                holdings = _v6_attach_market_values(holdings)
+            payload = build_v6_response(holdings, event_source="sample", **kwargs)
+        payload["status"] = "ok"
+        payload["weight_mode_requested"] = "market" if want_market else "cost"
+        payload["demo_portfolios"] = list_demo_portfolios()
+        payload["active_demo"] = demo or "my_holdings"
+        resp = jsonify(_clean_nan(payload))
+        # Freshness guard: market-intelligence payloads must never be cached, so
+        # a stale CDN/browser copy can't be shown as "today's latest".
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
+    except Exception as e:
+        app.logger.exception("V6 intelligence build failed")
+        return jsonify(_clean_nan({
+            "status": "error",
+            "flags": [{"severity": "error", "code": "V6_BUILD_FAILED", "message": str(e)}],
+        })), 500
+
+
+# NOTE: V6 Historical Replay is an INTERNAL QA / calibration tool only -- it has
+# no user-facing route or page. Run it from tests or a Python shell via
+# modeling.v6.replay (replay_all / evaluate). It is intentionally not exposed
+# over HTTP and not linked from the product UI.
+
+
 @app.route("/api/modeling/ma/arena/pairs", methods=["GET"])
 def api_ma_arena_pairs():
     """V5.2.2 Arena guardrail: compact precomputed directed pair results.
@@ -2849,69 +2937,6 @@ def api_ma_calculate():
                 "message": "M&A calculation is temporarily unavailable.",
             }],
         })), 500
-
-
-def _v6_market_values(holdings: list, base_currency: str) -> list:
-    """Best-effort market-value enrichment for V6 weighting.
-
-    Reuses the same quote router + FX conversion as the portfolio view to attach
-    ``market_value_base`` to each row so V6 can weight by market value. Any
-    quote/FX failure is swallowed and the row is left untouched, so the V6
-    engine falls back to its deterministic cost-basis weighting
-    (cost_price * quantity). Never raises, never touches the on-disk store.
-    """
-    enriched = []
-    for h in holdings:
-        row = dict(h)
-        symbol = str(h.get("symbol") or h.get("ticker") or "").strip()
-        qty = h.get("quantity")
-        if symbol and isinstance(qty, (int, float)) and qty > 0:
-            try:
-                quote = get_quote_router(symbol)
-                if isinstance(quote, dict):
-                    price = quote.get("current_price")
-                    currency = quote.get("currency", "USD")
-                    if price is not None:
-                        mv_native = float(price) * float(qty)
-                        mv_base, _fx = convert_to_base(mv_native, currency, base_currency)
-                        if mv_base is not None:
-                            row["market_value_base"] = mv_base
-            except Exception:
-                app.logger.exception("v6 market-value lookup failed for %s", symbol)
-        enriched.append(row)
-    return enriched
-
-
-@app.route("/api/modeling/v6/intelligence", methods=["GET"])
-def api_modeling_v6_intelligence():
-    """V6 Market Intelligence: deterministic event→holdings impact mapping.
-
-    Loads the user's portfolio via the existing loader; when none exists it
-    falls back to the engine's bundled synthetic sample (not the on-disk store),
-    flagged as demo so the UI labels it. On any unexpected failure it logs the
-    details server-side and returns a fixed public message only.
-    """
-    try:
-        base_currency = request.args.get("base", "HKD").upper()
-        if base_currency not in VALID_CURRENCIES:
-            base_currency = "HKD"
-        holdings = load_portfolio()
-        portfolio_is_demo = not holdings
-        if holdings:
-            holdings = _v6_market_values(holdings, base_currency)
-        payload = build_intelligence_response(
-            holdings=holdings or None,
-            portfolio_is_demo=portfolio_is_demo,
-        )
-        resp = jsonify(_clean_nan(payload))
-        # Freshness guard: this feed must never be served from a stale cache, so
-        # the UI's "latest" reflects the live response, not a yesterday copy.
-        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-        resp.headers["Pragma"] = "no-cache"
-        return resp
-    except Exception:
-        app.logger.exception("api_modeling_v6_intelligence failed")
-        return jsonify({"error": "Unable to build V6 intelligence response."}), 500
 
 
 @app.route("/api/modeling/dcf", methods=["POST"])

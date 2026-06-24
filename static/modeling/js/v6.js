@@ -20,6 +20,42 @@ function fmtPct(w) {
   if (w === null || w === undefined || !isFinite(w)) return "-";
   return `${(Number(w) * 100).toFixed(1)}%`;
 }
+function fmtBp(n) {
+  if (n === null || n === undefined || !isFinite(n)) return "-";
+  const v = Math.round(Number(n));
+  return `${v >= 0 ? "+" : ""}${v} bp`;
+}
+function fmtAbsBp(n) {
+  if (n === null || n === undefined || !isFinite(n)) return "-";
+  return `±${Math.round(Math.abs(Number(n)))} bp`;
+}
+function fmtSigma(n) {
+  if (n === null || n === undefined || !isFinite(n)) return "";
+  const v = Number(n);
+  return `${v >= 0 ? "+" : ""}${v.toFixed(1)}σ`;
+}
+function surpriseBadge(s) {
+  if (!s) return "";
+  const raw = s.score !== undefined && s.score !== null ? s.score : s.proxy_surprise;
+  const cls = Number(raw || 0) >= 0 ? "bullish" : "bearish";
+  if (s.kind === "consensus_surprise") {
+    if (Math.abs(Number(s.score || 0)) < 0.05) {
+      return `<span class="badge tiny">预期内 / priced in / 方向不明</span>`;
+    }
+    return `<span class="badge tiny ${cls}">预期差 ${fmtSigma(s.score)}</span>`;
+  }
+  if (s.proxy_surprise !== undefined && s.proxy_surprise !== null) {
+    return `<span class="badge tiny">proxy_surprise ${fmtSigma(s.proxy_surprise)}</span>`;
+  }
+  return "";
+}
+function crowdingText(c) {
+  if (!c) return "";
+  const score = c.priced_for_perfection;
+  if (score === undefined || score === null) return "";
+  const band = c.band === "high" ? "高" : c.band === "low" ? "低" : "中性";
+  return `拥挤度 ${band} / priced-for-perfection proxy ${Number(score).toFixed(2)}`;
+}
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -30,26 +66,7 @@ const STATUS_CN = { bullish: "偏利好", bearish: "偏利空", neutral: "中性
 const CHANNEL_CN = { direct: "直接影响", second_order: "二次传导", reflexivity: "反身性 / 情绪" };
 const PHASE_CN = { upcoming: "待公布", anticipation: "预期升温", live: "进行中", post_event: "影响衰减", expired: "已兑现" };
 const MODE_CN = { live: "公开实时源", "live-partial": "部分实时", fixture: "示例数据", unavailable: "不可用", error: "错误" };
-const MATCH_KIND_CN = { ticker: "代码命中", alias: "名称命中", macro_factor: "宏观因子", factor_tag: "主题因子", second_order: "二次传导", sector_transmission: "行业 / ETF 保守传导", reflexivity: "情绪敞口" };
-// Freshness vocabulary (mirrors modeling/v6/freshness.py).
-const FRESH_CN = { fresh: "新鲜", delayed: "存在延迟", stale: "陈旧", fixture: "示例回退", unknown: "时间未知", future_event_active: "未来事件", scheduled_event: "已排期" };
-const FRESH_CLS = { fresh: "bullish", delayed: "mixed", stale: "bearish", fixture: "neutral", unknown: "neutral" };
-const SRCMODE_CN = { live: "实时", partial_live: "部分实时", fixture_fallback: "示例回退", offline: "离线 / 未接实时源", error: "获取错误" };
-const SRCMODE_CLS = { live: "bullish", partial_live: "mixed", fixture_fallback: "neutral", offline: "neutral", error: "bearish" };
-// Breaking-alert vocabulary (mirrors modeling/v6/breaking.py).
-const URGENCY_CN = { breaking: "突发", elevated: "升温", normal: "一般" };
-const ALERT_TYPE_CN = {
-  breaking_news: "突发新闻", headline_velocity: "标题密集", sentiment_shock: "情绪切换",
-  macro_shock: "宏观冲击", sector_shock: "板块 / 主题", company_shock: "个股新闻流", source_failure: "数据源告警",
-};
-const ALERT_DIR_CN = { bullish: "偏利好", bearish: "偏利空", mixed: "多空分歧", neutral: "中性", unknown: "方向待定" };
-const fmtTs = (s) => (s ? String(s).replace("T", " ").replace("Z", " UTC").replace(/(\+\d{4})$/, " $1") : "—");
-const ageZh = (m) => {
-  if (m === null || m === undefined) return "—";
-  if (m < 60) return `${Math.round(m)} 分钟`;
-  if (m < 1440) return `${(m / 60).toFixed(1)} 小时`;
-  return `${(m / 1440).toFixed(1)} 天`;
-};
+const MATCH_KIND_CN = { ticker: "代码命中", alias: "名称命中", macro_factor: "宏观因子", factor_tag: "主题因子", second_order: "二次传导", sector_transmission: "行业 / ETF 保守传导", peer_transmission: "同业传导", contagion: "板块传染 read-through", reflexivity: "情绪敞口" };
 const ETYPE_CN = {
   analyst_upgrade: "上调评级", analyst_downgrade: "下调评级", price_target_raise: "上调目标价",
   price_target_cut: "下调目标价", earnings_beat: "业绩超预期", earnings_miss: "业绩不及预期",
@@ -77,8 +94,6 @@ function qstr() {
   const p = new URLSearchParams();
   if (activeDemo) p.set("demo", activeDemo);
   if (mergeSources) p.set("sources", "1");
-  // Cache-buster so the browser never re-serves a stale "latest" payload.
-  p.set("t", Date.now().toString());
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -90,7 +105,7 @@ async function load() {
   $("v6-body").innerHTML = `<div class="v6-loading">正在计算组合事件影响…</div>`;
   $("btn-sources").classList.toggle("active", mergeSources);
   try {
-    const resp = await fetch(`${API}/api/modeling/v6/intelligence${qstr()}`, { cache: "no-store" });
+    const resp = await fetch(`${API}/api/modeling/v6/intelligence${qstr()}`);
     DATA = await resp.json();
     if (DATA.status === "error") throw new Error("引擎构建失败");
     render();
@@ -113,40 +128,26 @@ function collapse(id, title, hint, body) {
   </details>`;
 }
 
-function render() {
-  renderSelector();
-  renderNotices();
-  const pf = DATA.portfolio;
-  // First screen = the answer: status, net read, why, key drivers, risks, what's next.
-  const primary =
-    renderFreshnessBanner() +
-    renderStatusBar(pf) +
-    renderAlerts() +
-    renderSummary(pf) +
-    renderNarrative(pf) +
-    renderDrivers(pf) +
-    renderRiskCards(pf) +
-    renderTimeline(pf) +
-    renderHoldings(pf);
-  // Secondary = deeper analysis, tucked into collapsible panels.
-  const secondary =
-    collapse("heatmap", "通道影响热力图", "绿=利好 · 红=利空 · 深浅=强度 · 点击单元格查看贡献事件", renderHeatmap(pf)) +
-    collapse("feed", "事件流", `${(DATA.events || []).length} 条（已去重）`, renderFeed()) +
-    collapse("themes", "主题归类", "按影响强度排序", renderThemes(pf)) +
-    collapse("sources", "数据源与方法", "公开来源 · 无需 API Key · 非投资建议", renderSources() + renderMethodology());
-  $("v6-body").innerHTML = primary + `<div class="v6-section-title">深入分析</div>` + secondary;
-  $("v6-foot").style.display = "none";   // methodology now lives in a collapsible
-}
+// Freshness vocabulary (mirrors modeling/v6/freshness.py).
+const FRESH_CN = { fresh: "新鲜", delayed: "存在延迟", stale: "陈旧", fixture: "示例回退", unknown: "时间未知", future_event_active: "未来事件", scheduled_event: "已排期" };
+const FRESH_CLS = { fresh: "bullish", delayed: "mixed", stale: "bearish", fixture: "neutral", unknown: "neutral" };
+const SRCMODE_CN = { live: "实时", partial_live: "部分实时", fixture_fallback: "示例回退", offline: "离线 / 未接实时源", error: "获取错误" };
+const SRCMODE_CLS = { live: "bullish", partial_live: "mixed", fixture_fallback: "neutral", offline: "neutral", error: "bearish" };
+// Breaking-alert vocabulary (mirrors modeling/v6/breaking.py).
+const URGENCY_CN = { breaking: "突发", elevated: "升温", normal: "一般" };
+const ALERT_TYPE_CN = {
+  breaking_news: "突发新闻", headline_velocity: "标题密集", sentiment_shock: "情绪切换",
+  macro_shock: "宏观冲击", sector_shock: "板块 / 主题", company_shock: "个股新闻流", source_failure: "数据源告警",
+};
+const ALERT_DIR_CN = { bullish: "偏利好", bearish: "偏利空", mixed: "多空分歧", neutral: "中性", unknown: "方向待定" };
+const fmtTs = (s) => (s ? String(s).replace("T", " ").replace("Z", " UTC").replace(/(\+\d{4})$/, " $1") : "—");
+const ageZh = (m) => {
+  if (m === null || m === undefined) return "—";
+  if (m < 60) return `${Math.round(m)} 分钟`;
+  if (m < 1440) return `${(m / 60).toFixed(1)} 小时`;
+  return `${(m / 1440).toFixed(1)} 天`;
+};
 
-function renderMethodology() {
-  return `<div class="v6-method">
-    引擎为确定性规则匹配（非 LLM）。事件经关键词分类器打标，按「持仓权重 × 方向 × 强度 × 相关性 × 置信度 × 时间权重」计分并聚合；
-    未来事件按预期定价提前计入、事件后按半衰期衰减，并识别「利好出尽」风险。公开来源适配器（Yahoo / Google News / SEC EDGAR / 宏观日历 / 机构标题）默认以示例 fixture 运行，可在联网时切换为公开实时源；每个来源都会如实标注 live / 部分实时 / 示例回退 / 不可用 状态。
-    本视图仅为事件—持仓影响方向解读，不构成投资建议，不提供买入 / 卖出信号、目标价或止损位。
-  </div>`;
-}
-
-// Freshness banner: the first thing the user sees -- can I trust "latest"?
 function renderFreshnessBanner() {
   const fz = DATA.freshness || {};
   const status = fz.freshness_status || DATA.freshness_status || "unknown";
@@ -204,6 +205,46 @@ function renderAlerts() {
   return head + `<div class="v6-alerts">${cards}</div>`;
 }
 
+function render() {
+  renderSelector();
+  renderNotices();
+  const pf = DATA.portfolio;
+  // First screen = the answer: status, net read, why, key drivers, risks, what's next.
+  const primary =
+    renderFreshnessBanner() +
+    renderStatusBar(pf) +
+    renderAlerts() +
+    renderSummary(pf) +
+    renderNarrative(pf) +
+    renderDrivers(pf) +
+    renderRiskCards(pf) +
+    renderTimeline(pf) +
+    renderHoldings(pf);
+  // Secondary = deeper analysis, tucked into collapsible panels.
+  const secondary =
+    collapse("heatmap", "通道影响热力图", "绿=利好 · 红=利空 · 深浅=强度 · 点击单元格查看贡献事件", renderHeatmap(pf)) +
+    collapse("feed", "事件流", `${(DATA.events || []).length} 条（已去重）`, renderFeed()) +
+    collapse("themes", "主题归类", "按影响强度排序", renderThemes(pf)) +
+    collapse("sources", "数据源与方法", "公开来源 · 无需 API Key · 非投资建议", renderSources() + renderMethodology());
+  $("v6-body").innerHTML = primary + `<div class="v6-section-title">深入分析</div>` + secondary;
+  $("v6-foot").style.display = "none";   // methodology now lives in a collapsible
+}
+
+function renderMethodology() {
+  return `<div class="v6-method">
+    引擎为确定性规则匹配（非 LLM）。事件经关键词分类器打标，按「持仓权重 × 方向 × 强度 × 相关性 × 置信度 × 时间权重」计分并聚合；
+    未来事件按预期定价提前计入、事件后按半衰期衰减，并识别「利好出尽」风险。公开来源适配器（Yahoo / Google News / SEC EDGAR / 宏观日历 / 机构标题）默认以示例 fixture 运行，可在联网时切换为公开实时源；每个来源都会如实标注 live / 部分实时 / 示例回退 / 不可用 状态。
+    <br><br>
+    <b>三个数据驱动层（均为确定性、非 LLM）：</b>
+    ① <b>真实事件日历</b> — FOMC / CPI / 非农 按公开排期、个股财报含 yfinance 刷新，固定日期真实倒计时；
+    ② <b>bp 校准</b> — 每类事件的「预期异常波动 (bp)」与「历史命中率」由真实历史行情回测（benchmark）学得，给无量纲的强度指数赋予可解读的量纲；
+    ③ <b>板块传染 read-through</b> — 单一龙头（如 AVGO / MU）的财报会按从真实联动数据学到的板块内聚度传导至同业持仓。
+    bp 为历史同类事件的平均 |基准相对异常波动|，是幅度参照而非收益预测。
+    <br><br>
+    本视图仅为事件—持仓影响方向解读，不构成投资建议，不提供买入 / 卖出信号、目标价或止损位。
+  </div>`;
+}
+
 function renderStatusBar(pf) {
   const gen = (DATA.generated_at || "").replace("T", " ").replace("Z", " UTC");
   const dis = Math.round((pf.disagreement || 0) * 100);
@@ -251,19 +292,16 @@ function renderNotices() {
     mock.style.display = "flex";
     $("mock-text").textContent = "已合并公开来源（" + (MODE_CN[DATA.sources_overall_mode] || DATA.sources_overall_mode) + "）。来源可用性以下方「数据源」状态为准。";
   }
-  // stale-data / source-health warning (professional, non-alarming).
-  // Prefer the centralized freshness warning so the page never implies the
-  // data is "today's latest" when it is fixture / delayed / stale / unknown.
+  // stale-data / source-health warning (professional, non-alarming)
   const sw = $("stale-notice");
   const h = DATA.source_health || {};
-  const freshWarn = DATA.freshness_warning_zh || (DATA.freshness || {}).freshness_warning_zh || "";
   if (sw) {
-    if (freshWarn) {
-      sw.style.display = "flex";
-      $("stale-text").textContent = freshWarn;
-    } else if (h.any_error) {
+    if (h.any_error) {
       sw.style.display = "flex";
       $("stale-text").textContent = "部分公开数据源当前不可用或返回错误，已自动回退到示例数据；读数仅供参考。";
+    } else if (h.all_fixture) {
+      sw.style.display = "flex";
+      $("stale-text").textContent = "当前全部为示例回退数据（未联网或来源无实时内容）；开启「合并来源」或联网后可获取公开实时源。";
     } else {
       sw.style.display = "none";
     }
@@ -305,18 +343,24 @@ function renderSummary(pf) {
   const weighting = pf.weight_is_fallback ? "等权回退" : (pf.weighting === "cost-basis" ? "成本加权" : pf.weighting === "market-value" ? "市值加权" : pf.weighting);
   const stat = (label, value, sub) =>
     `<div class="v6-hero-stat"><div class="hs-v">${value}</div><div class="hs-l">${label}</div>${sub ? `<div class="hs-s">${sub}</div>` : ""}</div>`;
+  const hasBp = pf.expected_abnormal_bp !== undefined && pf.expected_abnormal_bp !== null;
+  const bpStat = hasBp
+    ? stat("预期异常波动", `${fmtAbsBp(pf.expected_abs_bp)}`,
+        `方向净 <span class="v6-num ${impClass(pf.expected_abnormal_bp)}">${fmtBp(pf.expected_abnormal_bp)}</span> · 基于历史同类事件校准`)
+    : stat("事件覆盖率", `${Math.round((pf.coverage || 0) * 100)}%`, `${pf.covered_holdings || 0}/${pf.holdings_count} 只有事件`);
   return `
   <div class="v6-hero">
     <div class="v6-hero-main">
-      <div class="hs-l">组合净影响</div>
+      <div class="hs-l">组合净影响 · 强度指数（相对，无量纲）</div>
       <div class="v6-hero-score ${impClass(pf.net_impact_score)}">${fmtSigned(pf.net_impact_score)}</div>
       <div><span class="badge ${pf.status}" style="font-size:13px;padding:3px 12px;">${sCN(pf.status)}</span></div>
+      ${hasBp ? `<div class="hs-s">预期异常波动 <span class="v6-num ${impClass(pf.expected_abnormal_bp)}">≈ ${fmtAbsBp(pf.expected_abs_bp)}</span>（方向净 ${fmtBp(pf.expected_abnormal_bp)}）</div>` : ""}
       <div class="hs-s">${pf.holdings_count} 只持仓 · ${esc(weighting)}</div>
     </div>
     <div class="v6-hero-stats">
       ${stat("置信度", `${(pf.avg_confidence * 100).toFixed(0)}%`, `利好 ${fmtSigned(pf.positive_impact)} · 利空 ${fmtSigned(pf.negative_impact)}`)}
       ${stat("多空分歧度", `${Math.round((pf.disagreement || 0) * 100)}%`, (DATA.bands || {}).disagreement_cn ? `${(DATA.bands).disagreement_cn}分歧` : "")}
-      ${stat("事件覆盖率", `${Math.round((pf.coverage || 0) * 100)}%`, `${pf.covered_holdings || 0}/${pf.holdings_count} 只有事件`)}
+      ${bpStat}
     </div>
   </div>`;
 }
@@ -377,13 +421,23 @@ function renderTimeline(pf) {
     const risk = f.sell_the_news_risk >= 0.4
       ? `<div class="cat-risk">⚠ 利好出尽风险（预期已部分定价 ${(f.priced_in_score * 100).toFixed(0)}%）</div>` : "";
     const hits = (f.affected_tickers || []).slice(0, 6).join("、");
+    const rt = (f.readthrough_tickers || []).slice(0, 6).join("、");
+    // potential move (calibrated) + realized historical hit rate for this type
+    const bp = (f.potential_abs_bp !== undefined && f.potential_abs_bp !== null)
+      ? `<span class="badge tiny">潜在 ${fmtAbsBp(f.potential_abs_bp)}</span>` : "";
+    const hr = (f.hit_rate !== undefined && f.hit_rate !== null)
+      ? `<span class="badge tiny">历史命中 ${Math.round(f.hit_rate * 100)}%</span>` : "";
+    const sp = surpriseBadge(f.surprise);
+    const rtLine = rt ? `<div class="cat-hits">板块传导 read-through：${esc(rt)}</div>` : "";
     return `<div class="v6-cat">
       <div class="cd">${d.toFixed(d < 1 ? 1 : 0)}<small> 天后</small></div>
       <span class="badge phase phase-${esc(f.phase)}">${esc(f.temporal_label || PHASE_CN[f.phase])}</span>
       <span class="badge ${dirBadge(f.expected_direction)}" style="font-size:10px;">预期${dirCN(f.expected_direction)}</span>
+      ${bp}${hr}${sp}
       <div class="cat-ttl">${esc(f.title)}</div>
       <div class="cat-meta">${esc(etCN(f.event_type))} · ${esc(f.source)}</div>
-      <div class="cat-hits">影响持仓：${hits ? esc(hits) : "（间接）"}</div>
+      <div class="cat-hits">直接影响：${hits ? esc(hits) : "（仅宏观 / 间接）"}</div>
+      ${rtLine}
       ${risk}
     </div>`;
   }).join("");
@@ -421,6 +475,7 @@ function driverMini(d, sign) {
 
 function renderHolding(h, idx) {
   const pflag = h.matched_profile ? "" : ` <span class="badge neutral" title="未匹配内置画像，使用通用画像">通用画像</span>`;
+  const crowd = crowdingText(h.crowding_state);
   return `
   <div class="v6-holding" id="hold-${idx}">
     <div class="v6-holding-head" onclick="toggleHold(${idx})">
@@ -430,7 +485,7 @@ function renderHolding(h, idx) {
       </div>
       <div class="v6-col-hide"><div class="v6-col-label">权重</div><div class="v6-num">${fmtPct(h.weight)}</div></div>
       <div class="v6-col-hide"><div class="v6-col-label">事件数</div><div class="v6-num">${h.event_count}</div></div>
-      <div><div class="v6-col-label">净影响</div><div class="v6-num ${impClass(h.net_impact)}">${fmtSigned(h.net_impact)}</div></div>
+      <div><div class="v6-col-label">净影响</div><div class="v6-num ${impClass(h.net_impact)}">${fmtSigned(h.net_impact)}</div>${(h.expected_abnormal_bp !== undefined && h.expected_abnormal_bp !== null && Math.abs(h.expected_abnormal_bp) >= 0.5) ? `<div class="mut" style="font-size:10px;">≈ ${fmtBp(h.expected_abnormal_bp)}</div>` : ""}</div>
       <div class="v6-col-hide">
         <div class="v6-col-label">通道贡献（直/二/情/未来）</div>
         <div>${chanBar(h.channel_scores)}</div>
@@ -439,6 +494,7 @@ function renderHolding(h, idx) {
     </div>
     <div class="v6-detail">
       <div class="v6-concl">${esc(h.conclusion)}</div>
+      ${crowd ? `<div class="v6-tags"><span class="badge tiny">${esc(crowd)}</span></div>` : ""}
       <div class="v6-keyline">
         <span>▲ 关键利好：${driverMini(h.key_positive_driver, 1)}</span>
         <span>▼ 关键利空：${driverMini(h.key_negative_driver, -1)}</span>
@@ -458,16 +514,20 @@ function evtCard(r) {
   const ph = r.is_future || r.phase === "post_event"
     ? `<span class="badge phase phase-${esc(r.phase)}">${esc(r.temporal_label || PHASE_CN[r.phase])}</span>` : "";
   const cd = r.is_future ? `<span class="badge tiny">${Math.abs(r.countdown_days).toFixed(0)}天后</span>` : "";
+  const sp = surpriseBadge(r.surprise);
+  const crowdAdj = r.crowding_adjust !== undefined && r.crowding_adjust !== null && Math.abs(Number(r.crowding_adjust) - 1) > 0.001
+    ? `<span class="badge tiny">crowding x${Number(r.crowding_adjust).toFixed(2)}</span>` : "";
   return `<div class="v6-evt">
     <div class="v6-evt-top">
       <div>
         <div class="v6-evt-title">${esc(r.title)}</div>
         <div class="v6-evt-meta">${esc(r.source_type)} · ${esc(etCN(r.event_type))} ${mk} ${ph} ${cd}
-          · 命中 [${(r.matched_terms || []).map(esc).join("、")}]</div>
+          ${sp} ${crowdAdj} · 命中 [${(r.matched_terms || []).map(esc).join("、")}]</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <span class="badge ${dirBadge(r.effective_direction)}">${dirCN(r.effective_direction)}</span>
         <div class="v6-num ${dCls}" style="margin-top:4px;">${fmtSigned(r.impact)}</div>
+        ${(r.expected_bp !== undefined && r.expected_bp !== null && Math.abs(r.expected_bp) >= 0.5) ? `<div class="mut" style="font-size:10px;">≈ ${fmtBp(r.expected_bp)}</div>` : ""}
       </div>
     </div>
     <div class="v6-evt-exp">${esc(r.explanation)}</div>
@@ -561,6 +621,7 @@ function renderFeed() {
     if (e.age_label) bits.push(`<span class="${ageStale ? "neg" : ""}">${esc(e.age_label)}</span>`);
     if (e.source_count > 1) bits.push(`×${e.source_count}源`);
     if (e.is_scheduled) bits.push("已排期");
+    if (e.surprise) bits.push(surpriseBadge(e.surprise));
     const tickers = (e.related_tickers || []).length ? `<div class="v6-feed-tk">${esc(e.related_tickers.join("、"))}</div>` : "";
     const rel = (e.portfolio_abs_impact || 0) > 1e-9
       ? `<div class="rel v6-num ${impClass(e.portfolio_net_impact)}">${fmtSigned(e.portfolio_net_impact, 2)}</div><div class="rl">组合相关</div>`
@@ -594,10 +655,9 @@ function renderSources() {
   const cards = srcs.map(s => {
     const rel = s.reliability ? `<span class="badge ${relCls[s.reliability] || "neutral"}" style="font-size:9.5px;">${esc(s.reliability)}</span>` : "";
     const seen = s.last_success ? esc(s.last_success.replace("T", " ").replace("Z", "")) : "—";
-    const errMsg = s.error_zh || s.error || "";   // sanitized, never raw
     return `<div class="v6-source">
       <div class="sn">${esc(s.source_name)} ${modeBadge(s.mode)} ${rel}</div>
-      <div class="mut" style="font-size:10.5px;margin-top:3px;">${s.item_count} 条 · 最近成功 ${seen}${errMsg ? " · " + esc(errMsg) : ""}</div>
+      <div class="mut" style="font-size:10.5px;margin-top:3px;">${s.item_count} 条 · 最近成功 ${seen}${s.error ? " · " + esc(s.error) : ""}</div>
     </div>`;
   }).join("");
   return `<div class="v6-sources">${cards}</div>`;

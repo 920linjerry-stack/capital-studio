@@ -1,0 +1,166 @@
+{
+  "_meta": {
+    "global_mean_bp": 503.91,
+    "n_rows": 203,
+    "note": "expected_abs_bp is the historical mean |benchmark-relative move|; not a forecast of profit.",
+    "shrink_k": 4.0,
+    "source": "replay benchmark (real yfinance abnormal returns) -> empirical-Bayes per event_type",
+    "window_days": 5
+  },
+  "types": {
+    "ai_capex_semis": {
+      "decisive_n": 5,
+      "expected_abs_bp": 371.5,
+      "hit_rate": 0.8,
+      "n": 5,
+      "raw_mean_bp": 265.5
+    },
+    "analyst_downgrade": {
+      "decisive_n": 1,
+      "expected_abs_bp": 567.1,
+      "hit_rate": 1.0,
+      "n": 1,
+      "raw_mean_bp": 820.0
+    },
+    "analyst_upgrade": {
+      "decisive_n": 2,
+      "expected_abs_bp": 360.3,
+      "hit_rate": 1.0,
+      "n": 2,
+      "raw_mean_bp": 73.2
+    },
+    "bank_stress": {
+      "decisive_n": 6,
+      "expected_abs_bp": 573.3,
+      "hit_rate": 1.0,
+      "n": 6,
+      "raw_mean_bp": 619.5
+    },
+    "earnings_beat": {
+      "decisive_n": 23,
+      "expected_abs_bp": 770.8,
+      "hit_rate": 0.609,
+      "n": 23,
+      "raw_mean_bp": 817.2
+    },
+    "earnings_miss": {
+      "decisive_n": 15,
+      "expected_abs_bp": 896.6,
+      "hit_rate": 0.8,
+      "n": 15,
+      "raw_mean_bp": 1001.3
+    },
+    "guidance_cut": {
+      "decisive_n": 6,
+      "expected_abs_bp": 637.0,
+      "hit_rate": 0.833,
+      "n": 6,
+      "raw_mean_bp": 725.7
+    },
+    "guidance_raise": {
+      "decisive_n": 5,
+      "expected_abs_bp": 548.8,
+      "hit_rate": 0.6,
+      "n": 5,
+      "raw_mean_bp": 584.6
+    },
+    "jobs_report": {
+      "decisive_n": 2,
+      "expected_abs_bp": 201.5,
+      "hit_rate": 1.0,
+      "n": 10,
+      "raw_mean_bp": 80.5
+    },
+    "macro_inflation_cool": {
+      "decisive_n": 10,
+      "expected_abs_bp": 530.5,
+      "hit_rate": 0.7,
+      "n": 19,
+      "raw_mean_bp": 536.0
+    },
+    "macro_inflation_hot": {
+      "decisive_n": 11,
+      "expected_abs_bp": 528.0,
+      "hit_rate": 0.636,
+      "n": 20,
+      "raw_mean_bp": 532.8
+    },
+    "oil_up": {
+      "decisive_n": 8,
+      "expected_abs_bp": 467.8,
+      "hit_rate": 0.75,
+      "n": 8,
+      "raw_mean_bp": 449.8
+    },
+    "outage": {
+      "decisive_n": 1,
+      "expected_abs_bp": 447.9,
+      "hit_rate": 1.0,
+      "n": 1,
+      "raw_mean_bp": 223.9
+    },
+    "price_target_cut": {
+      "decisive_n": 1,
+      "expected_abs_bp": 559.2,
+      "hit_rate": 1.0,
+      "n": 1,
+      "raw_mean_bp": 780.2
+    },
+    "price_target_raise": {
+      "decisive_n": 1,
+      "expected_abs_bp": 484.0,
+      "hit_rate": 1.0,
+      "n": 1,
+      "raw_mean_bp": 404.4
+    },
+    "rate_cut": {
+      "decisive_n": 5,
+      "expected_abs_bp": 198.6,
+      "hit_rate": 0.8,
+      "n": 8,
+      "raw_mean_bp": 46.0
+    },
+    "rate_hike": {
+      "decisive_n": 24,
+      "expected_abs_bp": 494.1,
+      "hit_rate": 0.458,
+      "n": 25,
+      "raw_mean_bp": 492.6
+    },
+    "regulatory_risk": {
+      "decisive_n": 12,
+      "expected_abs_bp": 290.0,
+      "hit_rate": 0.583,
+      "n": 15,
+      "raw_mean_bp": 232.9
+    },
+    "risk_off": {
+      "decisive_n": 12,
+      "expected_abs_bp": 344.0,
+      "hit_rate": 0.583,
+      "n": 14,
+      "raw_mean_bp": 298.3
+    },
+    "risk_on": {
+      "decisive_n": 0,
+      "expected_abs_bp": 405.1,
+      "hit_rate": null,
+      "n": 1,
+      "raw_mean_bp": 9.9
+    },
+    "uncategorized": {
+      "decisive_n": 0,
+      "expected_abs_bp": 451.2,
+      "hit_rate": null,
+      "n": 2,
+      "raw_mean_bp": 345.8
+    },
+    "yields_up": {
+      "decisive_n": 2,
+      "expected_abs_bp": 491.8,
+      "hit_rate": 0.0,
+      "n": 2,
+      "raw_mean_bp": 467.6
+    }
+  }
+}

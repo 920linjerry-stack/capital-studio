@@ -23,6 +23,7 @@ from modeling.v6.dedupe import dedupe_events
 from modeling.v6.schemas import MarketEvent
 from modeling.v6 import templates
 from modeling.v6 import timing
+from modeling.v6 import surprise
 from modeling.v6 import freshness as freshness_mod
 from modeling.v6.breaking import detect_breaking
 from modeling.v6.narrative import group_events, portfolio_narrative
@@ -57,11 +58,12 @@ def build_intelligence_response(
     portfolio_is_demo: bool = False,
     allow_network: bool = False,
     include_source_feed: bool = False,
+    include_calendar: bool = True,
 ) -> dict[str, Any]:
     """Assemble the full V6 intelligence payload for the UI.
 
     Args:
-        holdings: application portfolio rows (or synthetic sample rows). When
+        holdings: Portfolio Tracker rows (or ``portfolio.json`` rows). When
             falsy, the engine uses the bundled sample portfolio.
         events: Pre-built events. When ``None``, the bundled sample feed is used.
         event_source: Label for where events came from ("sample" | "live" | ...).
@@ -72,6 +74,7 @@ def build_intelligence_response(
     Returns a JSON-serializable dict (see modeling/v6/README.md for the schema).
     """
     portfolio = build_portfolio(holdings)
+    events_were_default = events is None
     if events is None:
         events = load_fixture_events(now=now)
 
@@ -79,12 +82,19 @@ def build_intelligence_response(
     from modeling.v6.sources.registry import ingest_events, overall_data_mode, source_health
     from modeling.v6.sources.base import sanitize_source_status
     tickers = [p["exposure"].ticker for p in portfolio.get("positions", [])]
+
+    # --- real event calendar: swap the synthetic now+delta future fixtures for
+    # real, fixed-date scheduled catalysts (so the countdown actually counts
+    # down and sector bellwethers like MU appear). Only on the default feed.
+    if include_calendar and events_were_default:
+        from modeling.v6.calendar import build_calendar_events
+        events = [e for e in events if not e.event_id.startswith("v6-f")]
+        events = events + build_calendar_events(tickers, now=now, allow_network=allow_network)
     fetch_started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     source_events, source_statuses = ingest_events(tickers=tickers, allow_network=allow_network)
     fetch_finished_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     # Defense-in-depth: re-scrub every source status at the V6 API boundary so a
-    # raw adapter exception can never reach the client via ``sources[].error``,
-    # even if a future adapter forgets to sanitize.
+    # raw adapter exception can never reach the client via ``sources[].error``.
     source_statuses = [sanitize_source_status(s) for s in source_statuses]
     sources_overall = overall_data_mode(source_statuses)
     sources_health = source_health(source_statuses)
@@ -262,6 +272,7 @@ def _event_for_ui(e: MarketEvent) -> dict[str, Any]:
         "severity_cn": templates.severity_cn(e.magnitude),
         "confidence_band": templates.confidence_band(e.confidence),
         "confidence_band_cn": templates.confidence_band_cn(e.confidence),
+        "surprise": surprise.surprise_payload(e),
     }
 
 

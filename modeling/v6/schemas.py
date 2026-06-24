@@ -139,6 +139,15 @@ def _as_str_list(value: Any) -> list[str]:
     return [str(v) for v in value]
 
 
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 @dataclass
 class MarketEvent:
     """A single structured market event.
@@ -150,7 +159,7 @@ class MarketEvent:
 
     event_id: str
     title: str
-    source: str = ""                       # e.g. "Fixture News", "Official Filing"
+    source: str = ""                       # e.g. "Reuters", "FOMC", "GS Research"
     source_type: str = "company"           # one of SOURCE_TYPES
     timestamp: str = ""                     # ISO-8601 string; not parsed here
     event_type: str = "uncategorized"      # one of EVENT_TYPES
@@ -171,6 +180,20 @@ class MarketEvent:
     post_event_decay_hours: float = 0.0     # half-life after the event realizes
     sell_the_news_risk: float = 0.0         # 0..1 "good news exhausted" / 利好出尽
     phase_override: str = ""                # optional forced event_phase
+
+    # --- Pillar 5: structured surprise audit -----------------------------
+    # ``actual`` / ``expected`` / ``surprise_std`` require a traceable
+    # structured source. ``proxy_surprise`` is separate and is never presented
+    # as true consensus surprise.
+    actual: float | None = None
+    expected: float | None = None
+    surprise_std: float | None = None
+    surprise_unit: str = ""
+    surprise_source: str = ""
+    surprise_label: str = ""
+    higher_is_bullish: bool | None = None
+    proxy_surprise: float | None = None
+    proxy_surprise_source: str = ""
 
     # --- provenance / dedupe ---------------------------------------------
     data_mode: str = "fixture"              # one of DATA_MODES
@@ -201,6 +224,12 @@ class MarketEvent:
         self.surprise_sensitivity = _clamp(float(self.surprise_sensitivity), 0.0, 1.0)
         self.sell_the_news_risk = _clamp(float(self.sell_the_news_risk), 0.0, 1.0)
         self.post_event_decay_hours = max(0.0, float(self.post_event_decay_hours))
+        self.actual = _optional_float(self.actual)
+        self.expected = _optional_float(self.expected)
+        self.surprise_std = _optional_float(self.surprise_std)
+        if self.surprise_std is not None and self.surprise_std <= 0:
+            self.surprise_std = None
+        self.proxy_surprise = _optional_float(self.proxy_surprise)
         self.source_count = max(1, int(self.source_count))
         self.source_list = _as_str_list(self.source_list) or ([self.source] if self.source else [])
         self.recognized_states = [

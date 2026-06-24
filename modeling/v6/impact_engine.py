@@ -37,6 +37,10 @@ from modeling.v6.schemas import (
 )
 from modeling.v6 import templates
 from modeling.v6 import timing
+from modeling.v6 import calibration
+from modeling.v6 import contagion
+from modeling.v6 import crowding
+from modeling.v6 import surprise
 from modeling.v6.classifier import state_direction
 
 # Tag reserved for the reflexivity channel; it is NOT counted as second-order
@@ -375,6 +379,29 @@ def match_event_to_holding(
             "matched_terms": [_REFLEXIVITY_TAG],
         })
 
+    # --- CONTAGION: a bellwether single-name event reaches a sector peer ---
+    # Learned *fallback* read-through: only when the holding has no other
+    # transmission for this event (the existing factor/sector paths already
+    # handle headlines that carry explicit sector tags). This fills the gap for
+    # pure earnings/guidance bellwether prints -- e.g. "MU reports earnings" or
+    # the AVGO effect -- whose headline has no semis tag to propagate.
+    already_transmitted = any(c["channel"] == "second_order" for c in contributions)
+    if (not match_kind and not already_transmitted and event.related_tickers
+            and event.source_type in {"company", "institutional", "official"}):
+        best_rt, primary_hit = 0.0, None
+        for rel_t in event.related_tickers:
+            rt = contagion.read_through(rel_t, exposure.ticker)
+            if rt > best_rt:
+                best_rt, primary_hit = rt, rel_t
+        if best_rt > 0:
+            contributions.append({
+                "channel": "second_order",
+                "match_kind": "contagion",
+                "effective_direction": event.direction,
+                "relevance": round(best_rt, 4),
+                "matched_terms": [f"{primary_hit}→{exposure.ticker}"],
+            })
+
     return contributions
 
 
@@ -383,18 +410,45 @@ def score_contribution(
     weight: float,
     contribution: dict[str, Any],
     elapsed_hours: float | None = None,
+    *,
+    effective_direction: int | None = None,
+    magnitude_multiplier: float = 1.0,
+    reaction_multiplier: float = 1.0,
 ) -> float:
     """Signed impact for a single channel contribution (the V6 formula)."""
     decay = _decay_factor(event, elapsed_hours)
+    direction = contribution["effective_direction"] if effective_direction is None else effective_direction
     return (
         weight
-        * contribution["effective_direction"]
+        * direction
         * event.magnitude
+        * magnitude_multiplier
         * contribution["relevance"]
         * event.confidence
         * event.classification_confidence
         * decay
+        * reaction_multiplier
     )
+
+
+def _surprise_direction_for_contribution(event: MarketEvent, contribution: dict[str, Any]) -> int | None:
+    """Map event-level surprise direction onto a holding/channel contribution."""
+    sdir = surprise.effective_direction(event)
+    if sdir is None:
+        return None
+    if sdir == DIRECTION_NEUTRAL:
+        return DIRECTION_NEUTRAL
+    if contribution.get("match_kind") == "macro_factor" and event.direction in (DIRECTION_BULLISH, DIRECTION_BEARISH):
+        return contribution["effective_direction"] * sdir * event.direction
+    return sdir
+
+
+def _crowding_applies(event: MarketEvent) -> bool:
+    if event.source_type != "company":
+        return False
+    if event.event_type in {"earnings_beat", "earnings_miss", "guidance_raise", "guidance_cut", "earnings_date"}:
+        return True
+    return bool({"earnings", "guidance"} & set(event.affected_tags))
 
 
 def _aggregate_status(pos: float, neg_abs: float, avg_conf: float) -> str:
@@ -443,6 +497,9 @@ def analyze_holding(
     bear = 0
     conf_sum = 0.0
     conf_n = 0
+    exp_bp = 0.0       # signed expected abnormal move (calibrated, bp)
+    exp_abs_bp = 0.0   # gross expected abnormal move (bp)
+    crowd_state = crowding.crowding_state(exposure.ticker)
 
     for ev in events:
         contribs = match_event_to_holding(ev, exposure)
@@ -451,10 +508,32 @@ def analyze_holding(
         tp = timing.temporal_profile(ev, now)
         mult = tp["temporal_multiplier"]
         for c in contribs:
-            base = score_contribution(ev, weight, c)
+            surprise_dir = _surprise_direction_for_contribution(ev, c)
+            scoring_dir = c["effective_direction"] if surprise_dir is None else surprise_dir
+            surprise_mult = surprise.magnitude_multiplier(ev)
+            crowd_mult = (
+                crowding.reaction_multiplier(scoring_dir, crowd_state)
+                if _crowding_applies(ev) else 1.0
+            )
+            base = score_contribution(
+                ev, weight, c,
+                effective_direction=scoring_dir,
+                magnitude_multiplier=surprise_mult,
+                reaction_multiplier=crowd_mult,
+            )
             impact = base * mult
             # effective direction the reader sees (after sell-the-news flip)
-            eff_dir = _sign(impact) if abs(impact) > _EPS else c["effective_direction"]
+            eff_dir = _sign(impact) if abs(impact) > _EPS else scoring_dir
+            ev_conf = round(ev.confidence * ev.classification_confidence, 4)
+            # Calibrated parallel to ``impact``: same shape, real unit (bp). The
+            # learned per-type move is scaled by weight, channel relevance,
+            # confidence and the temporal weight (magnitude only -> abs(mult)).
+            bp = weight * calibration.contribution_bp(
+                event_type=ev.event_type, effective_direction=eff_dir,
+                relevance=c["relevance"], confidence=ev_conf,
+                temporal_multiplier=abs(mult),
+            ) * surprise_mult * crowd_mult
+            s_payload = surprise.surprise_payload(ev)
             row = {
                 "event_id": ev.event_id,
                 "title": ev.title,
@@ -475,6 +554,10 @@ def analyze_holding(
                 "recognized_states": list(ev.recognized_states),
                 "classification_flags": list(ev.classification_flags),
                 "impact": round(impact, 6),
+                "expected_bp": round(bp, 1),
+                "surprise": s_payload,
+                "crowding_adjust": round(crowd_mult, 4),
+                "surprise_magnitude_multiplier": round(surprise_mult, 4),
                 "phase": tp["phase"],
                 "is_future": tp["is_future"],
                 "countdown_days": tp["countdown_days"],
@@ -505,6 +588,8 @@ def analyze_holding(
             else:
                 neg_abs += -impact
                 bear += 1
+            exp_bp += bp
+            exp_abs_bp += abs(bp)
             conf_sum += ev.confidence * ev.classification_confidence
             conf_n += 1
 
@@ -551,6 +636,9 @@ def analyze_holding(
         "net_impact": net,
         "positive_impact": round(pos, 6),
         "negative_impact": round(-neg_abs, 6),
+        "expected_abnormal_bp": round(exp_bp, 1),
+        "expected_abs_bp": round(exp_abs_bp, 1),
+        "crowding_state": crowd_state,
         "status": status,
         "event_count": event_count,
         "bullish_count": bull,
@@ -636,10 +724,17 @@ def analyze_portfolio(
     covered = sum(1 for h in holdings if h["event_count"] > 0)
     coverage = round(covered / len(holdings), 4) if holdings else 0.0
 
+    # Calibrated bp readout: holding bp is already position-weighted, so the
+    # portfolio expected abnormal move is their sum.
+    exp_bp = round(sum(h.get("expected_abnormal_bp", 0.0) for h in holdings), 1)
+    exp_abs_bp = round(sum(h.get("expected_abs_bp", 0.0) for h in holdings), 1)
+
     return {
         "net_impact_score": net_score,
         "positive_impact": round(pos, 6),
         "negative_impact": round(-neg_abs, 6),
+        "expected_abnormal_bp": exp_bp,
+        "expected_abs_bp": exp_abs_bp,
         "status": status,
         "avg_confidence": round(avg_conf, 4),
         "disagreement": disagreement,
@@ -680,7 +775,22 @@ def build_future_timeline(
         tp = timing.temporal_profile(ev, now)
         if not tp["is_future"]:
             continue
-        hit = sorted({e.ticker for e in exposures if match_event_to_holding(ev, e)})
+        # Which holdings it touches -- directly OR via learned contagion (so a
+        # bellwether earnings print lists the sector peers it reads through to).
+        direct_hits, readthrough_hits = [], []
+        for e in exposures:
+            cs = match_event_to_holding(ev, e)
+            if not cs:
+                continue
+            if any(c.get("match_kind") == "contagion" for c in cs) and all(
+                    c.get("match_kind") == "contagion" for c in cs):
+                readthrough_hits.append(e.ticker)
+            else:
+                direct_hits.append(e.ticker)
+        # Drop scheduled catalysts that touch nothing in this portfolio (e.g. a
+        # bank bellwether's earnings for an all-tech book).
+        if not (direct_hits or readthrough_hits):
+            continue
         out.append({
             "event_id": ev.event_id,
             "title": ev.title,
@@ -698,7 +808,11 @@ def build_future_timeline(
             "time_weight": tp["time_weight"],
             "sell_the_news_risk": round(ev.sell_the_news_risk, 4),
             "priced_in_score": round(ev.priced_in_score, 4),
-            "affected_tickers": hit,
+            "potential_abs_bp": calibration.scheduled_potential_bp(ev.event_type),
+            "hit_rate": calibration.type_hit_rate(ev.event_type),
+            "surprise": surprise.surprise_payload(ev),
+            "affected_tickers": sorted(direct_hits),
+            "readthrough_tickers": sorted(readthrough_hits),
             "summary": ev.summary,
         })
     out.sort(key=lambda r: r["countdown_days"])
