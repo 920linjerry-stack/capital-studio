@@ -83,6 +83,9 @@ _RAW_EVENTS: list[dict] = [
         "related_tickers": [],
         "decay_hours": 0.0,
         "summary": "A 25bp cut with dovish guidance lowers the discount rate for long-duration growth assets.",
+        "proxy_surprise": -1.0,
+        "proxy_surprise_source": "Fixture macro surprise proxy; not consensus surprise",
+        "higher_is_bullish": False,
     },
     {
         "event_id": "v6-e4",

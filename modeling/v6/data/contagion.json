@@ -1,0 +1,99 @@
+{
+  "_meta": {
+    "max_read_through": 0.6,
+    "note": "coefficient = damped read-through of a single-name event onto sector peers; not a forecast.",
+    "shrink_k": 3.0,
+    "source": "replay benchmark co-movement (real abnormal returns) shrunk to seed priors",
+    "window_days": 5
+  },
+  "clusters": {
+    "ai_semis": {
+      "coefficient": 0.222,
+      "cohesion": 0.842,
+      "members": [
+        "NVDA",
+        "AMD",
+        "AVGO",
+        "TSM",
+        "ASML",
+        "MU",
+        "MRVL",
+        "QCOM",
+        "SMCI",
+        "ARM",
+        "SOXX",
+        "SMH",
+        "XLK",
+        "QQQ",
+        "TQQQ"
+      ],
+      "pairs_observed": 19,
+      "prior": 0.55,
+      "transmission": 0.202
+    },
+    "banks": {
+      "coefficient": 0.528,
+      "cohesion": 0.714,
+      "members": [
+        "JPM",
+        "BAC",
+        "GS",
+        "WFC",
+        "C",
+        "MS",
+        "XLF"
+      ],
+      "pairs_observed": 7,
+      "prior": 0.5,
+      "transmission": 0.757
+    },
+    "energy": {
+      "coefficient": 0.6,
+      "cohesion": 1.0,
+      "members": [
+        "XOM",
+        "CVX",
+        "COP",
+        "SLB",
+        "USO",
+        "XLE"
+      ],
+      "pairs_observed": 14,
+      "prior": 0.55,
+      "transmission": 0.783
+    },
+    "healthcare": {
+      "coefficient": 0.35,
+      "cohesion": null,
+      "members": [
+        "LLY",
+        "NVO",
+        "UNH",
+        "JNJ",
+        "MRK",
+        "PFE",
+        "XLV"
+      ],
+      "pairs_observed": 0,
+      "prior": 0.35,
+      "transmission": null
+    },
+    "megacap_tech": {
+      "coefficient": 0.539,
+      "cohesion": 1.0,
+      "members": [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "QQQ",
+        "XLK",
+        "SPY"
+      ],
+      "pairs_observed": 1,
+      "prior": 0.45,
+      "transmission": 0.806
+    }
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "_meta": {
+    "method": "heuristic price-only crowding / priced-for-perfection proxy; not valuation",
+    "note": "priced_for_perfection is a 0..1 price proxy from run-up, proximity to 52w high, and low realized volatility. It is not a valuation percentile.",
+    "refreshed_at": "2026-06-24T00:00:00Z",
+    "source": "committed offline snapshot; refreshable from yfinance keyless adjusted close history",
+    "weights": {
+      "low_vol": 0.2,
+      "proximity_to_high": 0.35,
+      "run_up": 0.45
+    }
+  },
+  "tickers": {
+    "AAPL": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.58,
+      "proximity_to_52w_high": 0.91,
+      "realized_vol_1m": 0.23,
+      "run_up_3m": 0.06,
+      "run_up_6m": 0.11,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "AMD": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.62,
+      "proximity_to_52w_high": 0.88,
+      "realized_vol_1m": 0.42,
+      "run_up_3m": 0.12,
+      "run_up_6m": 0.18,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "AMZN": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.55,
+      "proximity_to_52w_high": 0.9,
+      "realized_vol_1m": 0.27,
+      "run_up_3m": 0.05,
+      "run_up_6m": 0.09,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "AVGO": {
+      "band": "high",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.94,
+      "proximity_to_52w_high": 0.99,
+      "realized_vol_1m": 0.29,
+      "run_up_3m": 0.34,
+      "run_up_6m": 0.62,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "BAC": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.43,
+      "proximity_to_52w_high": 0.83,
+      "realized_vol_1m": 0.28,
+      "run_up_3m": 0.01,
+      "run_up_6m": 0.04,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "CVX": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.46,
+      "proximity_to_52w_high": 0.84,
+      "realized_vol_1m": 0.24,
+      "run_up_3m": 0.02,
+      "run_up_6m": 0.03,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "GOOGL": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.57,
+      "proximity_to_52w_high": 0.92,
+      "realized_vol_1m": 0.25,
+      "run_up_3m": 0.07,
+      "run_up_6m": 0.1,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "GS": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.5,
+      "proximity_to_52w_high": 0.86,
+      "realized_vol_1m": 0.27,
+      "run_up_3m": 0.04,
+      "run_up_6m": 0.06,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "JPM": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.52,
+      "proximity_to_52w_high": 0.9,
+      "realized_vol_1m": 0.22,
+      "run_up_3m": 0.04,
+      "run_up_6m": 0.08,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "META": {
+      "band": "high",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.82,
+      "proximity_to_52w_high": 0.97,
+      "realized_vol_1m": 0.31,
+      "run_up_3m": 0.21,
+      "run_up_6m": 0.35,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "MSFT": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.64,
+      "proximity_to_52w_high": 0.94,
+      "realized_vol_1m": 0.2,
+      "run_up_3m": 0.08,
+      "run_up_6m": 0.14,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "NVDA": {
+      "band": "high",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.86,
+      "proximity_to_52w_high": 0.98,
+      "realized_vol_1m": 0.38,
+      "run_up_3m": 0.28,
+      "run_up_6m": 0.55,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "QQQ": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.56,
+      "proximity_to_52w_high": 0.93,
+      "realized_vol_1m": 0.18,
+      "run_up_3m": 0.05,
+      "run_up_6m": 0.11,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "SPY": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.5,
+      "proximity_to_52w_high": 0.91,
+      "realized_vol_1m": 0.16,
+      "run_up_3m": 0.03,
+      "run_up_6m": 0.08,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "TQQQ": {
+      "band": "high",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.78,
+      "proximity_to_52w_high": 0.94,
+      "realized_vol_1m": 0.55,
+      "run_up_3m": 0.16,
+      "run_up_6m": 0.32,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "TSM": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.6,
+      "proximity_to_52w_high": 0.91,
+      "realized_vol_1m": 0.3,
+      "run_up_3m": 0.1,
+      "run_up_6m": 0.18,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "UNH": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.32,
+      "proximity_to_52w_high": 0.78,
+      "realized_vol_1m": 0.26,
+      "run_up_3m": -0.03,
+      "run_up_6m": -0.05,
+      "source": "offline yfinance-style price proxy snapshot"
+    },
+    "XOM": {
+      "band": "neutral",
+      "data_mode": "fixture",
+      "priced_for_perfection": 0.47,
+      "proximity_to_52w_high": 0.85,
+      "realized_vol_1m": 0.25,
+      "run_up_3m": 0.02,
+      "run_up_6m": 0.04,
+      "source": "offline yfinance-style price proxy snapshot"
+    }
+  }
+}

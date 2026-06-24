@@ -1,0 +1,139 @@
+{
+  "_meta": {
+    "data_classification": "internal replay QA fixture / benchmark observation data",
+    "note": "Structured macro observations only. Equity EPS consensus is intentionally not filled without a traceable provider; use proxy_surprise separately.",
+    "production_boundary": "This file is not an external real-time consensus feed and must not be marketed or surfaced as a true consensus provider.",
+    "runtime_fallback": "In production/live paths, when structured actual/expected/surprise_std/source is unavailable, V6 must show proxy_surprise or fall back to headline/classifier logic.",
+    "source": "internal replay QA expected-change fixtures paired with public FOMC decisions; not a live provider",
+    "window_days": 5
+  },
+  "events": {
+    "fomc-hawkish": {
+      "actual": 75,
+      "expected": 50,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-03-16": {
+      "actual": 25,
+      "expected": 25,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-05-04": {
+      "actual": 50,
+      "expected": 50,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-06-15": {
+      "actual": 75,
+      "expected": 50,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-07-27": {
+      "actual": 75,
+      "expected": 75,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-09-21": {
+      "actual": 75,
+      "expected": 75,
+      "higher_is_bullish": false,
+      "proxy_surprise": 1.0,
+      "proxy_surprise_source": "FOMC statement / SEP higher-for-longer proxy; not consensus surprise",
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-11-02": {
+      "actual": 75,
+      "expected": 75,
+      "higher_is_bullish": false,
+      "proxy_surprise": 1.0,
+      "proxy_surprise_source": "FOMC press conference hawkish guidance proxy; not consensus surprise",
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2022-12-14": {
+      "actual": 50,
+      "expected": 50,
+      "higher_is_bullish": false,
+      "proxy_surprise": 1.0,
+      "proxy_surprise_source": "FOMC SEP terminal-rate higher-for-longer proxy; not consensus surprise",
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2023-02-01": {
+      "actual": 25,
+      "expected": 25,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2023-03-22": {
+      "actual": 25,
+      "expected": 25,
+      "higher_is_bullish": false,
+      "proxy_surprise": 0.5,
+      "proxy_surprise_source": "Hike amid banking-stress policy-risk proxy; not consensus surprise",
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2023-05-03": {
+      "actual": 25,
+      "expected": 25,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-hike-2023-07-26": {
+      "actual": 25,
+      "expected": 25,
+      "higher_is_bullish": false,
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    },
+    "fomc-rate_hike-2023-09-20": {
+      "actual": 0,
+      "expected": 0,
+      "higher_is_bullish": false,
+      "proxy_surprise": 1.0,
+      "proxy_surprise_source": "FOMC dot-plot higher-for-longer proxy; not consensus surprise",
+      "surprise_label": "Fed funds target change vs expected change",
+      "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
+      "surprise_std": 25,
+      "surprise_unit": "bp"
+    }
+  }
+}
