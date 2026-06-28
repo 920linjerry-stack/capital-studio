@@ -65,6 +65,8 @@ class BenchmarkEvent:
     proxy_surprise_source: str = ""
     fixture_returns_by_ticker: dict[str, dict[str, float]] = field(default_factory=dict)
     fixture_benchmark_returns: dict[str, float] = field(default_factory=dict)
+    sector_benchmark_ticker: str = ""
+    fixture_sector_returns: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.affected_tickers = [str(t).upper() for t in self.affected_tickers]
@@ -113,6 +115,8 @@ class BenchmarkEvent:
             proxy_surprise_source=self.proxy_surprise_source,
             fixture_returns=dict(self.fixture_returns_by_ticker.get(ticker, {})),
             fixture_benchmark_returns=dict(self.fixture_benchmark_returns),
+            sector_benchmark_ticker=self.sector_benchmark_ticker,
+            fixture_sector_returns=dict(self.fixture_sector_returns),
         )
 
 
@@ -232,6 +236,8 @@ def load_benchmark_events(
                 proxy_surprise_source=surprise_row.get("proxy_surprise_source", ""),
                 fixture_returns_by_ticker=event_returns.get("tickers", {}),
                 fixture_benchmark_returns=event_returns.get("benchmark", {}),
+                sector_benchmark_ticker=event_returns.get("sector_ticker", ""),
+                fixture_sector_returns=event_returns.get("sector", {}),
             ))
     return events
 
@@ -368,6 +374,131 @@ def evaluate_benchmark(results: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "impact_score_calibration": _calibration(results, "impact"),
         "confidence_calibration": _calibration(results, "confidence"),
+        "probability_calibration": calibration_report(results),
+        "walk_forward": evaluate_walk_forward(results),
+        "selective": _selective_report(results),
+    }
+
+
+def _selective_report(results: list[dict[str, Any]]) -> dict[str, Any]:
+    from modeling.v6.selective import evaluate_selective
+    return evaluate_selective(results)
+
+
+def _decisive_outcomes(rows: list[dict[str, Any]], window: int = 5) -> list[tuple[str, int]]:
+    """(event_type, hit?) for every decisive row with a realized direction."""
+    out: list[tuple[str, int]] = []
+    for r in rows:
+        if r["predicted_direction"] == 0:
+            continue
+        realized = _direction_at_window(r, window)
+        if realized is None or realized == 0:
+            continue
+        out.append((r.get("event_type", "uncategorized"),
+                    1 if r["predicted_direction"] == realized else 0))
+    return out
+
+
+def calibration_report(results: list[dict[str, Any]], *, window: int = 5) -> dict[str, Any]:
+    """A3: Brier score + reliability bins from the committed per-type calibration.
+
+    Each decisive prediction is assigned P = ``direction_probability(type)`` and
+    scored against the realized outcome. This is the *in-sample* calibration
+    quality of the shipped coefficients; ``evaluate_walk_forward`` gives the
+    out-of-time view. No network, no LLM.
+    """
+    from modeling.v6.calibration import direction_probability, wilson_interval
+
+    pairs: list[tuple[float, int]] = []
+    for etype, hit in _decisive_outcomes(results, window):
+        p = direction_probability(etype)
+        if p is None:
+            continue
+        pairs.append((p, hit))
+    if not pairs:
+        return {"decisive_scored": 0, "brier": None, "reliability_bins": []}
+
+    brier = sum((p - hit) ** 2 for p, hit in pairs) / len(pairs)
+    # Reliability bins by predicted probability.
+    edges = [(0.0, 0.5), (0.5, 0.6), (0.6, 0.7), (0.7, 0.8), (0.8, 1.01)]
+    bins = []
+    for lo, hi in edges:
+        members = [(p, h) for p, h in pairs if lo <= p < hi]
+        if not members:
+            continue
+        n = len(members)
+        hits = sum(h for _, h in members)
+        bins.append({
+            "range": f"{lo:.2f}-{min(hi,1.0):.2f}",
+            "n": n,
+            "mean_predicted": round(sum(p for p, _ in members) / n, 3),
+            "empirical_hit": round(hits / n, 3),
+            "wilson_95": wilson_interval(hits, n),
+        })
+    return {
+        "decisive_scored": len(pairs),
+        "brier": round(brier, 4),
+        "note": "Brier over committed per-type probabilities; lower is better. In-sample.",
+        "reliability_bins": bins,
+    }
+
+
+def evaluate_walk_forward(results: list[dict[str, Any]], *, folds: int = 5, window: int = 5) -> dict[str, Any]:
+    """A2: time-series walk-forward of the per-type calibration layer.
+
+    Decisive rows are ordered by event time and split into ``folds`` temporal
+    chunks. For each chunk after the first, the per-type hit rate learned on all
+    *earlier* rows is used as the probability for that chunk (test), giving an
+    honest out-of-time hit rate and Brier. No engine re-run is needed -- the
+    realized vs predicted directions already live on each row.
+    """
+    rows = [r for r in results if r["predicted_direction"] != 0
+            and _direction_at_window(r, window) not in (None, 0)]
+    rows.sort(key=lambda r: r.get("event_time", ""))
+    if len(rows) < folds * 2:
+        folds = max(2, len(rows) // 2) if len(rows) >= 4 else 1
+    if folds < 2:
+        return {"folds": folds, "oos_decisive": 0, "oos_hit_rate": None, "oos_brier": None, "per_fold": []}
+
+    size = len(rows) // folds
+    chunks = [rows[i * size:(i + 1) * size] for i in range(folds - 1)] + [rows[(folds - 1) * size:]]
+
+    def _outcome(r) -> int:
+        return 1 if r["predicted_direction"] == _direction_at_window(r, window) else 0
+
+    per_fold, all_p, all_o = [], [], []
+    for i in range(1, folds):
+        train = [r for c in chunks[:i] for r in c]
+        test = chunks[i]
+        rate: dict[str, list[int]] = defaultdict(list)
+        for r in train:
+            rate[r.get("event_type", "uncategorized")].append(_outcome(r))
+        base = sum(_outcome(r) for r in train) / len(train) if train else 0.5
+        f_p, f_o = [], []
+        for r in test:
+            et = r.get("event_type", "uncategorized")
+            obs = rate.get(et, [])
+            p = (sum(obs) + 4.0 * base) / (len(obs) + 4.0) if obs else base
+            f_p.append(p)
+            f_o.append(_outcome(r))
+        if not f_o:
+            continue
+        per_fold.append({
+            "fold": i, "test_n": len(f_o),
+            "hit_rate": round(sum(f_o) / len(f_o), 3),
+            "brier": round(sum((p - o) ** 2 for p, o in zip(f_p, f_o)) / len(f_o), 4),
+        })
+        all_p += f_p
+        all_o += f_o
+    if not all_o:
+        return {"folds": folds, "oos_decisive": 0, "oos_hit_rate": None, "oos_brier": None, "per_fold": []}
+    return {
+        "folds": folds,
+        "oos_decisive": len(all_o),
+        "oos_hit_rate": round(sum(all_o) / len(all_o), 4),
+        "oos_brier": round(sum((p - o) ** 2 for p, o in zip(all_p, all_o)) / len(all_o), 4),
+        "note": "Out-of-time: each fold predicted from strictly earlier events only.",
+        "per_fold": per_fold,
     }
 
 

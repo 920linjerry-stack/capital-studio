@@ -1,0 +1,34 @@
+{
+  "feature_boundary": {
+    "crowding_dev": "pre-print available (price-proxy snapshot; look-ahead risk if latest snapshot reused for old events)",
+    "std_surprise": "post-print only (realized actual vs consensus)",
+    "whisper_excess": "post-print only (realized surprise vs own bar)"
+  },
+  "features": [
+    "std_surprise",
+    "whisper_excess",
+    "crowding_dev"
+  ],
+  "mode": "postprint",
+  "note": "C1 shadow model -- shadow output only, never replaces live V6 selective prediction.",
+  "shadow_model_version": "c1.shadow.logistic.v1",
+  "status": "shadow_under_review",
+  "weights": {
+    "b": 0.04761579930806296,
+    "mean": [
+      0.4390115558982204,
+      -0.26087536231884073,
+      0.08864734299516915
+    ],
+    "std": [
+      1.1795410554102048,
+      2.478615942176858,
+      0.14593727154925112
+    ],
+    "w": [
+      0.492066298084428,
+      0.04388303117676057,
+      0.015518963795324796
+    ]
+  }
+}

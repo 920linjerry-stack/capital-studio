@@ -72,6 +72,9 @@ class HistoricalEvent:
     # Stored realized returns (decimals, e.g. 0.03 == +3%) for offline replay.
     fixture_returns: dict[str, float] = field(default_factory=dict)
     fixture_benchmark_returns: dict[str, float] = field(default_factory=dict)
+    # Sector-ETF benchmark for residualized (sector-neutral) abnormal returns.
+    sector_benchmark_ticker: str = ""
+    fixture_sector_returns: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.known_at:
@@ -194,6 +197,11 @@ def replay_event(
     now = parse_dt(hist.event_time)
     rows: list[dict[str, Any]] = []
     bench, bench_mode = _benchmark_returns(hist, adapter, windows)
+    # Sector-ETF returns for residualized (sector-neutral) abnormal returns.
+    sector = {int(k): float(v) for k, v in (hist.fixture_sector_returns or {}).items()
+              if str(k).isdigit() or isinstance(k, int)} if hist.fixture_sector_returns else {}
+    if hist.fixture_sector_returns and not sector:
+        sector = {int(k): float(v) for k, v in hist.fixture_sector_returns.items()}
 
     for ticker in (hist.affected_tickers or []):
         exposure = get_profile(ticker) or _generic_profile(ticker)
@@ -205,8 +213,16 @@ def replay_event(
         for w in windows:
             s = stock.get(w)
             b = bench.get(w)
-            abn = (s - b) if (s is not None and b is not None) else None
-            ret_by_window[w] = {"stock": s, "benchmark": b, "abnormal": abn}
+            sec = sector.get(w)
+            # Residualize against the sector ETF when available (removes sector +
+            # market beta in one step); else fall back to SPY-relative abnormal.
+            if s is not None and sec is not None:
+                abn = s - sec
+            elif s is not None and b is not None:
+                abn = s - b
+            else:
+                abn = None
+            ret_by_window[w] = {"stock": s, "benchmark": b, "sector_benchmark": sec, "abnormal": abn}
 
         ew = ret_by_window.get(eval_window, {})
         realized_val = ew.get("abnormal")

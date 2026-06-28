@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "refreshed_at": "2026-06-24T15:20:05Z",
+    "source": "yfinance keyless index history"
+  },
+  "regime": {
+    "as_of": "2026-06-24T15:20:05Z",
+    "data_mode": "live",
+    "inflation": "stable",
+    "rate_cycle": "hold",
+    "risk": "neutral",
+    "source": "yfinance keyless index history",
+    "trend": "uptrend"
+  }
+}
