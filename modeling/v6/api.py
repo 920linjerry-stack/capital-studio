@@ -24,6 +24,13 @@ from modeling.v6.schemas import MarketEvent
 from modeling.v6 import templates
 from modeling.v6 import timing
 from modeling.v6 import surprise
+from modeling.v6 import whisper as whisper_mod
+from modeling.v6 import regime as regime_mod
+from modeling.v6 import calibration as calibration_mod
+from modeling.v6 import selective as selective_mod
+from modeling.v6 import c1_shadow as c1_shadow_mod
+from modeling.v6 import acceptance_bar as acceptance_bar_mod
+from modeling.v6 import pead as pead_mod
 from modeling.v6 import freshness as freshness_mod
 from modeling.v6.breaking import detect_breaking
 from modeling.v6.narrative import group_events, portfolio_narrative
@@ -150,7 +157,16 @@ def build_intelligence_response(
         row["age_label"] = age["label"]
         row["age_band"] = age["band"]
         row["freshness_status"] = freshness_mod.event_freshness(e, now)
+        prob = calibration_mod.direction_probability(e.event_type)
+        row["direction_probability"] = prob
+        row["signal_tier"] = selective_mod.signal_tier(prob)
+        row["shadow"] = c1_shadow_mod.shadow_for_event(e)   # read-only, shadow_only
         ui_events.append(row)
+    current_regime = regime_mod.regime_state()
+    concentration = _portfolio_concentration(analysis)
+    driver_probs = [calibration_mod.direction_probability(d.get("event_type"))
+                    for d in analysis.get("main_drivers", [])]
+    portfolio_signal = selective_mod.portfolio_signal(driver_probs)
     return {
         "version": "v6.4",
         "product": "V6 Market Intelligence",
@@ -177,8 +193,82 @@ def build_intelligence_response(
         "alerts": breaking["alerts"],
         "alert_summary": breaking["summary"],
         "boundaries": BOUNDARIES,
+        "regime": current_regime,
+        "signal": portfolio_signal,
+        "research": _research_block(tickers),
+        "concentration": concentration,
         "portfolio": _strip_portfolio_internal(analysis),
         "events": ui_events,
+    }
+
+
+def _research_block(tickers: list[str]) -> dict[str, Any]:
+    """Read-only shadow / logging / scaffold evidence. NOT an official signal.
+
+    Everything here is offline and deterministic; it never overrides the live
+    rule + selective-prediction conclusion above.
+    """
+    model = c1_shadow_mod._load_model()
+    shadow_card = {
+        "model_version": model.get("shadow_model_version", c1_shadow_mod.SHADOW_MODEL_VERSION),
+        "status": "shadow_only",
+        "promotion_status": model.get("status", "shadow_under_review"),
+        "note": "C1 影子模型,仅供研究审阅;不替代正式 V6 结论。",
+    }
+    bars = []
+    for t in tickers[:12]:
+        rec = acceptance_bar_mod.build_acceptance_bar(t, allow_network=False)
+        bars.append({
+            "ticker": rec.ticker,
+            "acceptance_bar_status": rec.acceptance_bar_status,
+            "own_historical_surprise_bar": rec.own_historical_surprise_bar,
+            "priced_for_perfection": rec.priced_for_perfection,
+            "option_implied_move": rec.option_implied_move,
+            "consensus_hurdle": rec.consensus_eps,
+            "warning": "option_implied_move 为预期波动量级,非方向预测;离线请求路径不取期权/共识。",
+        })
+    pead_store = pead_mod.load_pead_returns().get("events") or {}
+    matured = {str(w): sum(1 for c in pead_store.values() if str(w) in c) for w in pead_mod.ALL_WINDOWS}
+    pead_card = {
+        "status": "scaffold",
+        "events_with_labels": len(pead_store),
+        "matured_by_window": matured,
+        "note": "PEAD 中期漂移框架(20/40/60D),脚手架阶段,非交易信号;未成熟窗口不计入。",
+    }
+    return {
+        "disclaimer": "以下为研究/影子/记录字段,非正式 V6 结论,不构成方向预测或交易建议。",
+        "shadow_model": shadow_card,
+        "acceptance_bar": bars,
+        "pead": pead_card,
+    }
+
+
+def _portfolio_concentration(analysis: dict[str, Any]) -> dict[str, Any]:
+    """Covariance-aware concentration proxy from contagion clusters (read-only)."""
+    from modeling.v6 import contagion
+    holdings = analysis.get("holdings", []) or []
+    by_cluster: dict[str, float] = {}
+    total = 0.0
+    for h in holdings:
+        imp = abs(float(h.get("net_impact", 0.0) or 0.0))
+        if imp <= 0:
+            continue
+        cid = contagion.cluster_of(h.get("ticker", "")) or "uncorrelated"
+        by_cluster[cid] = by_cluster.get(cid, 0.0) + imp
+        total += imp
+    if total <= 0:
+        return {"hhi": None, "dominant_cluster": None, "shares": {}, "note": "无可归因影响"}
+    shares = {c: round(v / total, 4) for c, v in by_cluster.items()}
+    hhi = round(sum(s * s for s in shares.values()), 4)
+    dominant = max(shares, key=shares.get)
+    band = "高" if hhi >= 0.5 else "中" if hhi >= 0.3 else "低"
+    return {
+        "hhi": hhi,
+        "concentration_band": band,
+        "dominant_cluster": dominant,
+        "dominant_share": shares[dominant],
+        "shares": shares,
+        "note": "同一板块的持仓会共振；影响越集中于单一板块，分散度越低（HHI 越高）。",
     }
 
 

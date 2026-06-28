@@ -146,6 +146,42 @@ def type_hit_rate(event_type: str) -> float | None:
     return row.get("hit_rate") if row else None
 
 
+# Shrinkage toward a coin flip when a type has few decisive observations, so a
+# 1.0 hit_rate from n=1 does not masquerade as certainty (the U4 honesty fix).
+_PROB_SHRINK_K = 4.0
+
+
+def direction_probability(event_type: str) -> float | None:
+    """Calibrated P(the engine's directional call is correct) for an event type.
+
+    Fuses the realized per-type hit rate with its decisive sample size, shrunk
+    toward 0.5 (coin flip) by ``_PROB_SHRINK_K`` pseudo-observations. Returns
+    ``None`` when the type was never observed decisively. A value < 0.5 is an
+    honest signal that the mechanical rule is weak/contrarian for that type
+    (e.g. ``rate_hike`` in the benchmark) -- the UI can abstain or flip on it.
+    """
+    row = (load_calibration().get("types") or {}).get(event_type)
+    if not row:
+        return None
+    hr = row.get("hit_rate")
+    n = row.get("decisive_n") or 0
+    if hr is None or n <= 0:
+        return None
+    shrunk = (n * float(hr) + _PROB_SHRINK_K * 0.5) / (n + _PROB_SHRINK_K)
+    return round(shrunk, 3)
+
+
+def wilson_interval(hits: int, n: int, z: float = 1.96) -> tuple[float, float] | None:
+    """Wilson score interval for a hit rate (surfaces honest uncertainty)."""
+    if n <= 0:
+        return None
+    p = hits / n
+    denom = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    half = (z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5)) / denom
+    return (round(max(0.0, centre - half), 3), round(min(1.0, centre + half), 3))
+
+
 # Scheduled catalysts have no realized type yet; map them to the realized
 # counterpart(s) whose historical move best represents their potential.
 _SCHEDULED_PROXY: dict[str, tuple[str, ...]] = {

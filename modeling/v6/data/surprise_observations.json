@@ -1,13 +1,2472 @@
 {
   "_meta": {
     "data_classification": "internal replay QA fixture / benchmark observation data",
-    "note": "Structured macro observations only. Equity EPS consensus is intentionally not filled without a traceable provider; use proxy_surprise separately.",
+    "equity_count": 55,
+    "equity_source": "yfinance get_earnings_dates (keyless EPS estimate vs reported)",
+    "note": "Macro entries are curated FOMC observations; equity entries are real keyless EPS surprises. Not an external real-time consensus feed.",
     "production_boundary": "This file is not an external real-time consensus feed and must not be marketed or surfaced as a true consensus provider.",
     "runtime_fallback": "In production/live paths, when structured actual/expected/surprise_std/source is unavailable, V6 must show proxy_surprise or fall back to headline/classifier logic.",
     "source": "internal replay QA expected-change fixtures paired with public FOMC decisions; not a live provider",
     "window_days": 5
   },
   "events": {
+    "amzn-earnings-miss-2022-04": {
+      "actual": -0.38,
+      "expected": 0.41,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.041,
+      "surprise_unit": "EPS"
+    },
+    "asml-bookings-miss-2024-04": {
+      "actual": 3.11,
+      "expected": 2.79,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.279,
+      "surprise_unit": "EPS"
+    },
+    "avgo-earnings-beat-2024-06": {
+      "actual": 1.1,
+      "expected": 1.08,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.108,
+      "surprise_unit": "EPS"
+    },
+    "bac-nii-warning-2024-04": {
+      "actual": 0.76,
+      "expected": 0.77,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.077,
+      "surprise_unit": "EPS"
+    },
+    "cvx-earnings-miss-2023-10": {
+      "actual": 3.05,
+      "expected": 3.68,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.368,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2022-10-27": {
+      "actual": 1.29,
+      "expected": 1.27,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.127,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2023-02-02": {
+      "actual": 1.88,
+      "expected": 1.95,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.195,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2023-05-04": {
+      "actual": 1.52,
+      "expected": 1.43,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.143,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2023-08-03": {
+      "actual": 1.26,
+      "expected": 1.19,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.119,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2023-11-02": {
+      "actual": 1.46,
+      "expected": 1.39,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.139,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2024-02-01": {
+      "actual": 2.18,
+      "expected": 2.11,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.211,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2024-05-02": {
+      "actual": 1.53,
+      "expected": 1.5,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.15,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2024-08-01": {
+      "actual": 1.4,
+      "expected": 1.34,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.134,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2024-10-31": {
+      "actual": 0.97,
+      "expected": 0.95,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.095,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2025-01-30": {
+      "actual": 2.4,
+      "expected": 2.34,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.234,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2025-05-01": {
+      "actual": 1.65,
+      "expected": 1.62,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.162,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2025-07-31": {
+      "actual": 1.57,
+      "expected": 1.43,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.143,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2025-10-30": {
+      "actual": 1.85,
+      "expected": 1.77,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.177,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2026-01-29": {
+      "actual": 2.84,
+      "expected": 2.67,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.267,
+      "surprise_unit": "EPS"
+    },
+    "earn-AAPL-2026-04-30": {
+      "actual": 2.01,
+      "expected": 1.94,
+      "higher_is_bullish": true,
+      "surprise_label": "AAPL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.194,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2022-05-03": {
+      "actual": 1.13,
+      "expected": 0.92,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.092,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2022-08-02": {
+      "actual": 1.05,
+      "expected": 1.04,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.104,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2022-11-01": {
+      "actual": 0.67,
+      "expected": 0.7,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.07,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2023-01-31": {
+      "actual": 0.69,
+      "expected": 0.67,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.067,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2023-05-02": {
+      "actual": 0.6,
+      "expected": 0.56,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.056,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2023-08-01": {
+      "actual": 0.58,
+      "expected": 0.57,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.057,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2023-10-31": {
+      "actual": 0.7,
+      "expected": 0.68,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.068,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2024-01-30": {
+      "actual": 0.77,
+      "expected": 0.77,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.077,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2024-04-30": {
+      "actual": 0.62,
+      "expected": 0.61,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.061,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2024-07-30": {
+      "actual": 0.69,
+      "expected": 0.68,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.068,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2025-05-06": {
+      "actual": 0.96,
+      "expected": 0.93,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.093,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2025-11-04": {
+      "actual": 1.2,
+      "expected": 1.17,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.117,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2026-02-03": {
+      "actual": 1.53,
+      "expected": 1.32,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.132,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMD-2026-05-05": {
+      "actual": 1.37,
+      "expected": 1.29,
+      "higher_is_bullish": true,
+      "surprise_label": "AMD EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.129,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2022-07-28": {
+      "actual": -0.2,
+      "expected": 0.12,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2022-10-27": {
+      "actual": 0.28,
+      "expected": 0.21,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.021,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2023-02-02": {
+      "actual": 0.03,
+      "expected": 0.16,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2023-04-27": {
+      "actual": 0.31,
+      "expected": 0.21,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.021,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2023-08-03": {
+      "actual": 0.65,
+      "expected": 0.34,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.034,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2023-10-26": {
+      "actual": 0.94,
+      "expected": 0.58,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.058,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2024-02-01": {
+      "actual": 1.0,
+      "expected": 0.8,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.08,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2024-04-30": {
+      "actual": 0.98,
+      "expected": 0.83,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.083,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2024-08-01": {
+      "actual": 1.26,
+      "expected": 1.02,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.102,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2024-10-31": {
+      "actual": 1.43,
+      "expected": 1.14,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.114,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2025-02-06": {
+      "actual": 1.86,
+      "expected": 1.48,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.148,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2025-05-01": {
+      "actual": 1.59,
+      "expected": 1.36,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.136,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2025-07-31": {
+      "actual": 1.68,
+      "expected": 1.33,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.133,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2025-10-30": {
+      "actual": 1.95,
+      "expected": 1.56,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.156,
+      "surprise_unit": "EPS"
+    },
+    "earn-AMZN-2026-04-29": {
+      "actual": 2.78,
+      "expected": 1.65,
+      "higher_is_bullish": true,
+      "surprise_label": "AMZN EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.165,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2023-07-19": {
+      "actual": 4.93,
+      "expected": 4.61,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.461,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2023-10-18": {
+      "actual": 4.81,
+      "expected": 4.63,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.463,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2024-01-24": {
+      "actual": 5.2,
+      "expected": 4.78,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.478,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2024-04-17": {
+      "actual": 3.11,
+      "expected": 2.79,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.279,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2024-07-17": {
+      "actual": 4.01,
+      "expected": 3.69,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.369,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2024-10-15": {
+      "actual": 5.28,
+      "expected": 4.86,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.486,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2025-01-29": {
+      "actual": 6.84,
+      "expected": 6.73,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.673,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2025-04-16": {
+      "actual": 6.0,
+      "expected": 5.79,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.579,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2025-07-16": {
+      "actual": 5.9,
+      "expected": 5.25,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.525,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2025-10-15": {
+      "actual": 5.49,
+      "expected": 5.37,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.537,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2026-01-27": {
+      "actual": 7.34,
+      "expected": 7.55,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.755,
+      "surprise_unit": "EPS"
+    },
+    "earn-ASML-2026-04-14": {
+      "actual": 7.15,
+      "expected": 6.62,
+      "higher_is_bullish": true,
+      "surprise_label": "ASML EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.662,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2023-03-02": {
+      "actual": 1.03,
+      "expected": 1.02,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.102,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2023-06-01": {
+      "actual": 1.03,
+      "expected": 1.01,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.101,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2023-08-31": {
+      "actual": 1.05,
+      "expected": 1.04,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.104,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2023-12-07": {
+      "actual": 1.11,
+      "expected": 1.1,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.11,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2024-03-07": {
+      "actual": 1.1,
+      "expected": 1.04,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.104,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2024-06-12": {
+      "actual": 1.1,
+      "expected": 1.08,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.108,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2024-09-05": {
+      "actual": 1.24,
+      "expected": 1.21,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.121,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2024-12-12": {
+      "actual": 1.42,
+      "expected": 1.39,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.139,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2025-03-06": {
+      "actual": 1.6,
+      "expected": 1.51,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.151,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2025-06-05": {
+      "actual": 1.58,
+      "expected": 1.57,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.157,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2025-09-04": {
+      "actual": 1.69,
+      "expected": 1.66,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.166,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2025-12-11": {
+      "actual": 1.95,
+      "expected": 1.87,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.187,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2026-03-04": {
+      "actual": 2.05,
+      "expected": 2.02,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.202,
+      "surprise_unit": "EPS"
+    },
+    "earn-AVGO-2026-06-03": {
+      "actual": 2.44,
+      "expected": 2.4,
+      "higher_is_bullish": true,
+      "surprise_label": "AVGO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.24,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2023-04-18": {
+      "actual": 0.94,
+      "expected": 0.82,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.082,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2023-07-18": {
+      "actual": 0.88,
+      "expected": 0.84,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.084,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2023-10-17": {
+      "actual": 0.9,
+      "expected": 0.82,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.082,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2024-01-12": {
+      "actual": 0.35,
+      "expected": 0.64,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.064,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2024-04-16": {
+      "actual": 0.76,
+      "expected": 0.77,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.077,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2024-07-16": {
+      "actual": 0.83,
+      "expected": 0.8,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.08,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2024-10-15": {
+      "actual": 0.81,
+      "expected": 0.76,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.076,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2025-01-16": {
+      "actual": 0.82,
+      "expected": 0.77,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.077,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2025-04-15": {
+      "actual": 0.9,
+      "expected": 0.81,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.081,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2025-07-16": {
+      "actual": 0.89,
+      "expected": 0.86,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.086,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2025-10-15": {
+      "actual": 1.06,
+      "expected": 0.95,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.095,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2026-01-14": {
+      "actual": 0.98,
+      "expected": 0.95,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.095,
+      "surprise_unit": "EPS"
+    },
+    "earn-BAC-2026-04-15": {
+      "actual": 1.11,
+      "expected": 1.02,
+      "higher_is_bullish": true,
+      "surprise_label": "BAC EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.102,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2023-04-28": {
+      "actual": 3.55,
+      "expected": 3.38,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.338,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2023-07-23": {
+      "actual": 3.08,
+      "expected": 2.98,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.298,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2023-10-27": {
+      "actual": 3.05,
+      "expected": 3.68,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.368,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2024-02-02": {
+      "actual": 3.45,
+      "expected": 3.22,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.322,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2024-04-26": {
+      "actual": 2.93,
+      "expected": 2.91,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.291,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2024-08-02": {
+      "actual": 2.55,
+      "expected": 3.0,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.3,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2024-11-01": {
+      "actual": 2.51,
+      "expected": 2.42,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.242,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2025-01-31": {
+      "actual": 2.06,
+      "expected": 2.11,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.211,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2025-05-02": {
+      "actual": 2.18,
+      "expected": 2.15,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.215,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2025-08-01": {
+      "actual": 1.77,
+      "expected": 1.74,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.174,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2025-10-31": {
+      "actual": 1.85,
+      "expected": 1.71,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.171,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2026-01-30": {
+      "actual": 1.52,
+      "expected": 1.44,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.144,
+      "surprise_unit": "EPS"
+    },
+    "earn-CVX-2026-05-01": {
+      "actual": 1.41,
+      "expected": 0.97,
+      "higher_is_bullish": true,
+      "surprise_label": "CVX EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.097,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2022-10-25": {
+      "actual": 1.06,
+      "expected": 1.25,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.125,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2023-02-02": {
+      "actual": 1.05,
+      "expected": 1.19,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.119,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2023-04-25": {
+      "actual": 1.17,
+      "expected": 1.07,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.107,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2023-07-25": {
+      "actual": 1.44,
+      "expected": 1.34,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.134,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2023-10-24": {
+      "actual": 1.55,
+      "expected": 1.45,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.145,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2024-01-30": {
+      "actual": 1.64,
+      "expected": 1.6,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.16,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2024-04-25": {
+      "actual": 1.89,
+      "expected": 1.51,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.151,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2024-07-23": {
+      "actual": 1.89,
+      "expected": 1.85,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.185,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2024-10-29": {
+      "actual": 2.12,
+      "expected": 1.85,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.185,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2025-02-04": {
+      "actual": 2.15,
+      "expected": 2.13,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.213,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2025-04-24": {
+      "actual": 2.81,
+      "expected": 2.01,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.201,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2025-07-23": {
+      "actual": 2.31,
+      "expected": 2.19,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.219,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2025-10-29": {
+      "actual": 2.87,
+      "expected": 2.26,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.226,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2026-02-04": {
+      "actual": 2.82,
+      "expected": 2.64,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.264,
+      "surprise_unit": "EPS"
+    },
+    "earn-GOOGL-2026-04-29": {
+      "actual": 5.11,
+      "expected": 2.67,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.267,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2023-01-17": {
+      "actual": 3.32,
+      "expected": 5.77,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.577,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2023-04-18": {
+      "actual": 8.79,
+      "expected": 8.06,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.806,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2023-07-19": {
+      "actual": 3.08,
+      "expected": 3.83,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.383,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2023-10-17": {
+      "actual": 5.47,
+      "expected": 5.53,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.553,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2024-01-16": {
+      "actual": 5.48,
+      "expected": 4.27,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.427,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2024-04-15": {
+      "actual": 11.56,
+      "expected": 8.64,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.864,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2024-07-15": {
+      "actual": 8.41,
+      "expected": 8.4,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.84,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2024-10-15": {
+      "actual": 9.02,
+      "expected": 7.31,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.731,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2025-01-15": {
+      "actual": 10.97,
+      "expected": 8.29,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.829,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2025-04-14": {
+      "actual": 14.12,
+      "expected": 12.29,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 1.229,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2025-07-16": {
+      "actual": 10.91,
+      "expected": 9.62,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.962,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2025-10-14": {
+      "actual": 12.25,
+      "expected": 11.09,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 1.109,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2026-01-15": {
+      "actual": 14.01,
+      "expected": 11.76,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 1.176,
+      "surprise_unit": "EPS"
+    },
+    "earn-GS-2026-04-13": {
+      "actual": 17.55,
+      "expected": 16.24,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 1.624,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2023-01-13": {
+      "actual": 3.57,
+      "expected": 3.1,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.31,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2023-04-14": {
+      "actual": 4.1,
+      "expected": 3.37,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.337,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2023-07-14": {
+      "actual": 4.75,
+      "expected": 3.76,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.376,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2023-10-13": {
+      "actual": 4.33,
+      "expected": 3.97,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.397,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2024-01-12": {
+      "actual": 3.04,
+      "expected": 3.6,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.36,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2024-04-12": {
+      "actual": 4.44,
+      "expected": 4.13,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.413,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2024-07-12": {
+      "actual": 6.12,
+      "expected": 4.53,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.453,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2024-10-11": {
+      "actual": 4.37,
+      "expected": 3.99,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.399,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2025-01-15": {
+      "actual": 4.81,
+      "expected": 4.04,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.404,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2025-04-11": {
+      "actual": 5.07,
+      "expected": 4.64,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.464,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2025-07-15": {
+      "actual": 4.96,
+      "expected": 4.48,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.448,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2025-10-14": {
+      "actual": 5.07,
+      "expected": 4.87,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.487,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2026-01-13": {
+      "actual": 4.63,
+      "expected": 4.82,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.482,
+      "surprise_unit": "EPS"
+    },
+    "earn-JPM-2026-04-14": {
+      "actual": 5.94,
+      "expected": 5.51,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.551,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2023-04-27": {
+      "actual": 1.62,
+      "expected": 1.73,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.173,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2023-08-08": {
+      "actual": 2.11,
+      "expected": 1.99,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.199,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2023-11-02": {
+      "actual": 0.1,
+      "expected": -0.12,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2024-02-06": {
+      "actual": 2.49,
+      "expected": 2.37,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.237,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2024-04-30": {
+      "actual": 2.58,
+      "expected": 2.49,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.249,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2024-08-08": {
+      "actual": 3.92,
+      "expected": 2.77,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.277,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2024-10-30": {
+      "actual": 1.18,
+      "expected": 1.47,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.147,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2025-02-06": {
+      "actual": 5.32,
+      "expected": 5.07,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.507,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2025-05-01": {
+      "actual": 3.34,
+      "expected": 3.46,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.346,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2025-08-07": {
+      "actual": 6.31,
+      "expected": 5.59,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.559,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2025-10-30": {
+      "actual": 7.02,
+      "expected": 5.89,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.589,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2026-02-04": {
+      "actual": 7.54,
+      "expected": 6.91,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.691,
+      "surprise_unit": "EPS"
+    },
+    "earn-LLY-2026-04-30": {
+      "actual": 8.55,
+      "expected": 6.79,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.679,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2022-02-02": {
+      "actual": 3.67,
+      "expected": 3.83,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.383,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2022-07-27": {
+      "actual": 2.46,
+      "expected": 2.55,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.255,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2022-10-26": {
+      "actual": 1.64,
+      "expected": 1.86,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.186,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2023-02-01": {
+      "actual": 1.76,
+      "expected": 2.24,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.224,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2023-04-26": {
+      "actual": 2.2,
+      "expected": 1.98,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.198,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2023-07-26": {
+      "actual": 2.98,
+      "expected": 2.91,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.291,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2023-10-25": {
+      "actual": 4.39,
+      "expected": 3.63,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.363,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2024-02-01": {
+      "actual": 5.33,
+      "expected": 4.94,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.494,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2024-04-24": {
+      "actual": 4.71,
+      "expected": 4.32,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.432,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2024-07-31": {
+      "actual": 5.16,
+      "expected": 4.76,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.476,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2024-10-30": {
+      "actual": 6.03,
+      "expected": 5.29,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.529,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2025-01-29": {
+      "actual": 8.02,
+      "expected": 6.76,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.676,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2025-04-30": {
+      "actual": 6.43,
+      "expected": 5.22,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.522,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2025-07-30": {
+      "actual": 7.14,
+      "expected": 5.9,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.59,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2025-10-29": {
+      "actual": 1.05,
+      "expected": 6.71,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.671,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2026-01-28": {
+      "actual": 8.88,
+      "expected": 8.22,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.822,
+      "surprise_unit": "EPS"
+    },
+    "earn-META-2026-04-29": {
+      "actual": 10.44,
+      "expected": 6.66,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.666,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2022-10-25": {
+      "actual": 2.35,
+      "expected": 2.31,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.231,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2023-04-25": {
+      "actual": 2.45,
+      "expected": 2.23,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.223,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2023-07-25": {
+      "actual": 2.69,
+      "expected": 2.55,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.255,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2023-10-24": {
+      "actual": 2.99,
+      "expected": 2.65,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.265,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2024-01-30": {
+      "actual": 2.93,
+      "expected": 2.77,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.277,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2024-04-25": {
+      "actual": 2.94,
+      "expected": 2.84,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.284,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2024-07-30": {
+      "actual": 2.95,
+      "expected": 2.94,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.294,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2024-10-30": {
+      "actual": 3.3,
+      "expected": 3.11,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.311,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2025-01-29": {
+      "actual": 3.23,
+      "expected": 3.12,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.312,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2025-04-30": {
+      "actual": 3.46,
+      "expected": 3.22,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.322,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2025-07-30": {
+      "actual": 3.65,
+      "expected": 3.38,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.338,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2025-10-29": {
+      "actual": 4.13,
+      "expected": 3.66,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.366,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2026-01-28": {
+      "actual": 4.14,
+      "expected": 3.92,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.392,
+      "surprise_unit": "EPS"
+    },
+    "earn-MSFT-2026-04-29": {
+      "actual": 4.27,
+      "expected": 4.06,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.406,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2022-02-16": {
+      "actual": 0.13,
+      "expected": 0.12,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2022-05-25": {
+      "actual": 0.14,
+      "expected": 0.13,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2022-11-16": {
+      "actual": 0.06,
+      "expected": 0.07,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2023-02-22": {
+      "actual": 0.09,
+      "expected": 0.08,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2023-05-24": {
+      "actual": 0.11,
+      "expected": 0.09,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.02,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2023-08-23": {
+      "actual": 0.27,
+      "expected": 0.21,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.021,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2023-11-21": {
+      "actual": 0.4,
+      "expected": 0.34,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.034,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2024-02-21": {
+      "actual": 0.52,
+      "expected": 0.46,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.046,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2024-05-22": {
+      "actual": 0.61,
+      "expected": 0.56,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.056,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2024-08-28": {
+      "actual": 0.68,
+      "expected": 0.64,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.064,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2024-11-20": {
+      "actual": 0.81,
+      "expected": 0.75,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.075,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2025-02-26": {
+      "actual": 0.89,
+      "expected": 0.85,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.085,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2025-05-28": {
+      "actual": 0.81,
+      "expected": 0.75,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.075,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2025-08-27": {
+      "actual": 1.05,
+      "expected": 1.01,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.101,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2025-11-19": {
+      "actual": 1.3,
+      "expected": 1.26,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.126,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2026-02-25": {
+      "actual": 1.62,
+      "expected": 1.54,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.154,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVDA-2026-05-20": {
+      "actual": 1.87,
+      "expected": 1.77,
+      "higher_is_bullish": true,
+      "surprise_label": "NVDA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.177,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2023-05-04": {
+      "actual": 4.39,
+      "expected": 4.02,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.402,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2023-08-09": {
+      "actual": 4.32,
+      "expected": 4.5,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.45,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2023-11-02": {
+      "actual": 5.0,
+      "expected": 4.71,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.471,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2024-01-31": {
+      "actual": 4.91,
+      "expected": 4.45,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.445,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2024-05-02": {
+      "actual": 5.68,
+      "expected": 5.42,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.542,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2024-08-07": {
+      "actual": 4.49,
+      "expected": 4.91,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.491,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2024-11-06": {
+      "actual": 6.12,
+      "expected": 5.92,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.592,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2025-02-04": {
+      "actual": 6.34,
+      "expected": 5.97,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.597,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2025-05-07": {
+      "actual": 6.53,
+      "expected": 6.07,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.607,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2025-08-06": {
+      "actual": 5.96,
+      "expected": 6.0,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.6,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2025-11-05": {
+      "actual": 4.5,
+      "expected": 4.24,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.424,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2026-02-03": {
+      "actual": 6.04,
+      "expected": 5.9,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.59,
+      "surprise_unit": "EPS"
+    },
+    "earn-NVO-2026-05-05": {
+      "actual": 6.63,
+      "expected": 6.96,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.696,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2022-07-20": {
+      "actual": 0.76,
+      "expected": 0.6,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.06,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2022-10-19": {
+      "actual": 1.05,
+      "expected": 1.0,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.1,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2023-01-25": {
+      "actual": 1.19,
+      "expected": 1.11,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.111,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2023-07-19": {
+      "actual": 0.91,
+      "expected": 0.82,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.082,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2023-10-18": {
+      "actual": 0.66,
+      "expected": 0.73,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.073,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2024-01-24": {
+      "actual": 0.71,
+      "expected": 0.74,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.074,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2024-04-23": {
+      "actual": 0.45,
+      "expected": 0.49,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.049,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2024-07-23": {
+      "actual": 0.52,
+      "expected": 0.62,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.062,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2024-10-23": {
+      "actual": 0.72,
+      "expected": 0.6,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.06,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2025-01-29": {
+      "actual": 0.73,
+      "expected": 0.77,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.077,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2025-04-22": {
+      "actual": 0.27,
+      "expected": 0.41,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.041,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2025-10-22": {
+      "actual": 0.5,
+      "expected": 0.56,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.056,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2026-01-28": {
+      "actual": 0.5,
+      "expected": 0.45,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.045,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSLA-2026-04-22": {
+      "actual": 0.41,
+      "expected": 0.35,
+      "higher_is_bullish": true,
+      "surprise_label": "TSLA EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.035,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2022-10-13": {
+      "actual": 1.79,
+      "expected": 1.68,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.168,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2023-01-12": {
+      "actual": 1.82,
+      "expected": 1.76,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.176,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2023-04-20": {
+      "actual": 1.31,
+      "expected": 1.19,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.119,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2023-07-20": {
+      "actual": 1.14,
+      "expected": 1.08,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.108,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2023-10-18": {
+      "actual": 1.29,
+      "expected": 1.17,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.117,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2024-01-18": {
+      "actual": 1.44,
+      "expected": 1.37,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.137,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2024-04-18": {
+      "actual": 1.38,
+      "expected": 1.32,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.132,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2024-07-18": {
+      "actual": 1.48,
+      "expected": 1.42,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.142,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2024-10-17": {
+      "actual": 1.94,
+      "expected": 1.79,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.179,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2025-01-16": {
+      "actual": 2.24,
+      "expected": 2.22,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.222,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2025-04-17": {
+      "actual": 2.12,
+      "expected": 2.05,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.205,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2025-07-17": {
+      "actual": 2.47,
+      "expected": 2.31,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.231,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2025-10-15": {
+      "actual": 2.92,
+      "expected": 2.63,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.263,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2026-01-15": {
+      "actual": 3.14,
+      "expected": 2.98,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.298,
+      "surprise_unit": "EPS"
+    },
+    "earn-TSM-2026-04-15": {
+      "actual": 3.49,
+      "expected": 3.33,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.333,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2023-01-13": {
+      "actual": 5.34,
+      "expected": 5.17,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.517,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2023-04-14": {
+      "actual": 6.26,
+      "expected": 6.08,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.608,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2023-07-14": {
+      "actual": 6.14,
+      "expected": 5.98,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.598,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2023-10-13": {
+      "actual": 6.56,
+      "expected": 6.35,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.635,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2024-01-12": {
+      "actual": 6.16,
+      "expected": 5.99,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.599,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2024-04-16": {
+      "actual": 6.91,
+      "expected": 6.62,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.662,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2024-07-16": {
+      "actual": 6.8,
+      "expected": 6.63,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.663,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2024-10-15": {
+      "actual": 7.15,
+      "expected": 7.03,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.703,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2025-01-16": {
+      "actual": 6.81,
+      "expected": 6.74,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.674,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2025-04-17": {
+      "actual": 7.2,
+      "expected": 7.29,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.729,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2025-07-29": {
+      "actual": 4.08,
+      "expected": 4.45,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.445,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2025-10-28": {
+      "actual": 2.92,
+      "expected": 2.81,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.281,
+      "surprise_unit": "EPS"
+    },
+    "earn-UNH-2026-04-21": {
+      "actual": 7.23,
+      "expected": 6.6,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.66,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2023-04-28": {
+      "actual": 2.83,
+      "expected": 2.59,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.259,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2023-07-28": {
+      "actual": 1.94,
+      "expected": 2.02,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.202,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2023-10-27": {
+      "actual": 2.27,
+      "expected": 2.36,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.236,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2024-02-02": {
+      "actual": 2.48,
+      "expected": 2.19,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.219,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2024-04-26": {
+      "actual": 2.06,
+      "expected": 2.16,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.216,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2024-08-02": {
+      "actual": 2.14,
+      "expected": 2.01,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.201,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2024-11-01": {
+      "actual": 1.92,
+      "expected": 1.87,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.187,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2025-01-31": {
+      "actual": 1.67,
+      "expected": 1.55,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.155,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2025-05-02": {
+      "actual": 1.76,
+      "expected": 1.74,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.174,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2025-08-01": {
+      "actual": 1.64,
+      "expected": 1.56,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.156,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2025-10-31": {
+      "actual": 1.88,
+      "expected": 1.82,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.182,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2026-01-30": {
+      "actual": 1.71,
+      "expected": 1.69,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.169,
+      "surprise_unit": "EPS"
+    },
+    "earn-XOM-2026-05-01": {
+      "actual": 1.16,
+      "expected": 1.01,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.101,
+      "surprise_unit": "EPS"
+    },
     "fomc-hawkish": {
       "actual": 75,
       "expected": 50,
@@ -134,6 +2593,96 @@
       "surprise_source": "Federal Reserve decision; public market-implied consensus fixture",
       "surprise_std": 25,
       "surprise_unit": "bp"
+    },
+    "googl-ad-slowdown-2022-10": {
+      "actual": 1.06,
+      "expected": 1.25,
+      "higher_is_bullish": true,
+      "surprise_label": "GOOGL EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.125,
+      "surprise_unit": "EPS"
+    },
+    "gs-earnings-miss-2023-01": {
+      "actual": 3.32,
+      "expected": 5.77,
+      "higher_is_bullish": true,
+      "surprise_label": "GS EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.577,
+      "surprise_unit": "EPS"
+    },
+    "jpm-earnings-beat-2023-10": {
+      "actual": 4.33,
+      "expected": 3.97,
+      "higher_is_bullish": true,
+      "surprise_label": "JPM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.397,
+      "surprise_unit": "EPS"
+    },
+    "lly-guidance-raise-2023-08": {
+      "actual": 2.11,
+      "expected": 1.99,
+      "higher_is_bullish": true,
+      "surprise_label": "LLY EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.199,
+      "surprise_unit": "EPS"
+    },
+    "meta-earnings-miss-2022-02": {
+      "actual": 3.67,
+      "expected": 3.83,
+      "higher_is_bullish": true,
+      "surprise_label": "META EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.383,
+      "surprise_unit": "EPS"
+    },
+    "msft-earnings-beat-2024-04": {
+      "actual": 2.94,
+      "expected": 2.84,
+      "higher_is_bullish": true,
+      "surprise_label": "MSFT EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.284,
+      "surprise_unit": "EPS"
+    },
+    "nvo-guidance-raise-2023-08": {
+      "actual": 4.32,
+      "expected": 4.5,
+      "higher_is_bullish": true,
+      "surprise_label": "NVO EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.45,
+      "surprise_unit": "EPS"
+    },
+    "tsm-outlook-raise-2024-04": {
+      "actual": 1.38,
+      "expected": 1.32,
+      "higher_is_bullish": true,
+      "surprise_label": "TSM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.132,
+      "surprise_unit": "EPS"
+    },
+    "unh-cyber-cost-2024-04": {
+      "actual": 6.91,
+      "expected": 6.62,
+      "higher_is_bullish": true,
+      "surprise_label": "UNH EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.662,
+      "surprise_unit": "EPS"
+    },
+    "xom-earnings-miss-2024-04": {
+      "actual": 2.06,
+      "expected": 2.16,
+      "higher_is_bullish": true,
+      "surprise_label": "XOM EPS actual vs consensus estimate",
+      "surprise_source": "yfinance get_earnings_dates (consensus EPS estimate vs reported); keyless",
+      "surprise_std": 0.216,
+      "surprise_unit": "EPS"
     }
   }
 }

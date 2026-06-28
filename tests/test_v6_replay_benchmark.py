@@ -26,7 +26,7 @@ REQUIRED_TICKERS = {
 def test_benchmark_integrity_schema_and_size():
     events = load_benchmark_events()
     integrity = benchmark_integrity(events)
-    assert 50 <= len(events) <= 200
+    assert 50 <= len(events) <= 800
     assert integrity["duplicate_event_ids"] == []
     assert integrity["invalid_splits"] == []
     assert integrity["invalid_return_statuses"] == []

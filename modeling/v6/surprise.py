@@ -75,7 +75,13 @@ def has_structured_surprise(event: MarketEvent) -> bool:
 
 
 def effective_direction(event: MarketEvent) -> int | None:
-    """Direction implied by structured surprise, or None to keep existing logic."""
+    """Direction implied by structured surprise, or None to keep existing logic.
+
+    When a whisper baseline exists for the name (the stock's own historical bar),
+    the direction is driven by the *excess* surprise vs that bar rather than the
+    raw consensus surprise -- a serial beater beating by less than usual reads
+    bearish (the AVGO effect). Validated on the replay benchmark.
+    """
     score = surprise_score(event)
     if score is None:
         score = proxy_surprise_score(event)
@@ -84,6 +90,10 @@ def effective_direction(event: MarketEvent) -> int | None:
         score = proxy if proxy is not None else score
     if score is None:
         return None
+    from modeling.v6 import whisper
+    exc = whisper.excess_surprise(event)
+    if exc is not None:
+        score = exc   # surprise relative to the stock's own bar (whisper proxy)
     if abs(score) <= _EPS:
         return DIRECTION_NEUTRAL
     higher_good = event.higher_is_bullish

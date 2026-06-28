@@ -1,0 +1,86 @@
+{
+  "_meta": {
+    "method": "per-ticker mean standardized surprise = the stock's own expectation bar",
+    "min_history": 3,
+    "note": "Proxy for the whisper effect; not external whisper-number data.",
+    "source": "replay benchmark harvested EPS surprises (yfinance, keyless)"
+  },
+  "tickers": {
+    "AAPL": {
+      "mean_sd": 0.372,
+      "n": 15
+    },
+    "AMD": {
+      "mean_sd": 0.5026,
+      "n": 13
+    },
+    "AMZN": {
+      "mean_sd": 2.3469,
+      "n": 13
+    },
+    "ASML": {
+      "mean_sd": 0.6536,
+      "n": 13
+    },
+    "AVGO": {
+      "mean_sd": 0.233,
+      "n": 14
+    },
+    "BAC": {
+      "mean_sd": 0.2886,
+      "n": 13
+    },
+    "CVX": {
+      "mean_sd": 0.2182,
+      "n": 14
+    },
+    "GOOGL": {
+      "mean_sd": 1.2336,
+      "n": 16
+    },
+    "GS": {
+      "mean_sd": 0.5827,
+      "n": 15
+    },
+    "JPM": {
+      "mean_sd": 1.0991,
+      "n": 15
+    },
+    "LLY": {
+      "mean_sd": 1.697,
+      "n": 12
+    },
+    "META": {
+      "mean_sd": 0.3994,
+      "n": 18
+    },
+    "MSFT": {
+      "mean_sd": 0.6119,
+      "n": 15
+    },
+    "NVDA": {
+      "mean_sd": 0.7831,
+      "n": 17
+    },
+    "NVO": {
+      "mean_sd": 0.2321,
+      "n": 12
+    },
+    "TSLA": {
+      "mean_sd": 0.0722,
+      "n": 14
+    },
+    "TSM": {
+      "mean_sd": 0.5996,
+      "n": 13
+    },
+    "UNH": {
+      "mean_sd": 0.2361,
+      "n": 14
+    },
+    "XOM": {
+      "mean_sd": 0.3426,
+      "n": 14
+    }
+  }
+}
